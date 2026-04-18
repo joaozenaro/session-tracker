@@ -10,7 +10,7 @@ jobs:
       contents: write
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -33,5 +33,3 @@ jobs:
           tagName: app-v__VERSION__
           releaseName: 'Session Tracker v__VERSION__'
           releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: true
-          prerelease: false
