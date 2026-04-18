@@ -23,18 +23,17 @@ impl CustomizeConnection<SqliteConnection, diesel::r2d2::Error> for SqliteCustom
     }
 }
 
-pub fn setup_db(db_path: &str) -> DbPool {
+pub fn setup_db(db_path: &str) -> Result<DbPool, Box<dyn std::error::Error>> {
     let manager = ConnectionManager::<SqliteConnection>::new(db_path);
     let pool = r2d2::Pool::builder()
         .max_size(5)
         .connection_customizer(Box::new(SqliteCustomizer))
-        .build(manager)
-        .expect("Failed to create DB pool");
+        .build(manager)?;
 
     // Run pending migrations at startup (embedded at compile time)
-    let mut conn = pool.get().expect("Failed to get connection for migrations");
+    let mut conn = pool.get()?;
     conn.run_pending_migrations(MIGRATIONS)
-        .expect("Failed to run migrations");
+        .map_err(|e| format!("Migration error: {}", e))?;
 
-    pool
+    Ok(pool)
 }
