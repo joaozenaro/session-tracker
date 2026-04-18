@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS session_series;
+DROP TABLE IF EXISTS clients;

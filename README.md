@@ -1,7 +1,17 @@
-# Tauri + Vanilla TS
+# 🧾 Session Tracker
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Typescript.
+## Overview
 
-## Recommended IDE Setup
+A desktop-only appointment management app for psychotherapy sessions.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+**Stack:**
+
+* Frontend: React + Material UI
+* Backend: Rust (Tauri)
+* Database: SQLite (local only)
+
+**Features:**
+
+- [ ] Fully offline
+- [ ] Focus on session tracking + notes
+- [ ] Integrated transcription and AI text cleanup
