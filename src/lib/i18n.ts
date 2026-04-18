@@ -12,6 +12,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     date: 'Date',
     time: 'Time',
     sessionNotes: 'Session Notes',
+    sessionNotesPlaceholder: 'Write session notes here...',
     previousSessions: 'Previous Sessions',
     createRecurringSessions: 'Create Recurring Sessions',
     createSeriesOfSessions: 'Create a series of sessions',
@@ -61,6 +62,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     deleteSessionConfirm: 'Delete this session?',
     deleteClientConfirm: 'Delete this client and all their sessions?',
     words: 'words',
+    noSessionsThisDay: 'No sessions this day',
+    addSessionToSchedule: 'Click "Add Session" to schedule one',
   },
   pt: {
     calendar: 'Calendário',
@@ -73,6 +76,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     date: 'Data',
     time: 'Hora',
     sessionNotes: 'Notas da sessão',
+    sessionNotesPlaceholder: 'Escreva as anotações da sessão aqui...',
     previousSessions: 'Sessões anteriores',
     createRecurringSessions: 'Criar sessões recorrentes',
     createSeriesOfSessions: 'Criar uma série de sessões',
@@ -122,6 +126,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     deleteSessionConfirm: 'Excluir esta sessão?',
     deleteClientConfirm: 'Excluir este cliente e todas as suas sessões?',
     words: 'palavras',
+    noSessionsThisDay: 'Nenhuma sessão neste dia',
+    addSessionToSchedule: 'Clique em "Adicionar sessão" para agendar',
   },
 };
 

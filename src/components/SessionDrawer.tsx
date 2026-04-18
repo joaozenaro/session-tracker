@@ -241,7 +241,7 @@ export default function SessionDrawer({
           <TextField
             multiline
             fullWidth
-            placeholder="Write session notes here..."
+            placeholder={t(locale, 'sessionNotesPlaceholder')}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             variant="outlined"

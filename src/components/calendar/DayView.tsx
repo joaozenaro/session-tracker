@@ -39,8 +39,8 @@ export default function DayView({ sessions, onSessionClick }: DayViewProps) {
           gap: 1,
         }}
       >
-        <Typography variant="body1">No sessions this day</Typography>
-        <Typography variant="caption">Click "Add Session" to schedule one</Typography>
+        <Typography variant="body1">{t(locale, 'noSessionsThisDay')}</Typography>
+        <Typography variant="caption">{t(locale, 'addSessionToSchedule')}</Typography>
       </Box>
     );
   }

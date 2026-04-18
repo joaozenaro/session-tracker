@@ -20,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PhoneIcon from '@mui/icons-material/Phone';
 import CloseIcon from '@mui/icons-material/Close';
 import PersonIcon from '@mui/icons-material/Person';
+import { MuiTelInput } from 'mui-tel-input';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
 import type { Client, ClientInsert } from '../types/client';
@@ -123,13 +124,13 @@ function ClientForm({ open, client, onClose, locale }: ClientFormProps) {
           autoFocus
           size="small"
         />
-        <TextField
+        <MuiTelInput
           label={t(locale, 'telephone')}
           value={telephone}
-          onChange={(e) => setTelephone(e.target.value)}
+          onChange={setTelephone}
+          defaultCountry={locale === 'pt' ? 'BR' : 'US'}
           fullWidth
           size="small"
-          placeholder="+1 (555) 000-0000"
         />
       </Box>
       <Box sx={{ px: 2.5, py: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1.5 }}>
