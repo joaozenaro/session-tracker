@@ -224,6 +224,7 @@ export default function CalendarPage() {
       </Box>
 
       <SessionDrawer
+        key={editingSession?.id ?? 'new'}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         initialDate={drawerInitialDate}

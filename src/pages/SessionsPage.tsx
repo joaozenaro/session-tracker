@@ -342,6 +342,7 @@ export default function SessionsPage() {
       />
 
       <SessionDrawer
+        key={editingSession?.id ?? 'new'}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         session={editingSession}

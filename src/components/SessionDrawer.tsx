@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Drawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -71,10 +71,10 @@ export default function SessionDrawer({
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  const [date, setDate] = useState(initialDate ?? today);
-  const [time, setTime] = useState('10:00');
-  const [clientId, setClientId] = useState('');
-  const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(session?.session_date ?? initialDate ?? today);
+  const [time, setTime] = useState(session ? session.session_time.slice(0, 5) : '10:00');
+  const [clientId, setClientId] = useState(session?.client_id ?? '');
+  const [notes, setNotes] = useState(session?.notes ?? '');
   const [expandedPrev, setExpandedPrev] = useState<string | null>(null);
 
   const [showSeriesOptions, setShowSeriesOptions] = useState(false);
@@ -104,28 +104,6 @@ export default function SessionDrawer({
     date,
     session?.id
   );
-
-  // ── Reset form on open ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (open) {
-      if (session) {
-        setDate(session.session_date);
-        setTime(session.session_time.slice(0, 5));
-        setClientId(session.client_id);
-        setNotes(session.notes);
-        setCreateSeries(false);
-        setShowSeriesOptions(false);
-      } else {
-        setDate(initialDate ?? today);
-        setTime('10:00');
-        setClientId('');
-        setNotes('');
-        setCreateSeries(false);
-        setShowSeriesOptions(false);
-      }
-      setExpandedPrev(null);
-    }
-  }, [open, session, initialDate, today]);
 
   // ── Save handler ────────────────────────────────────────────────────────────
   const handleSave = async () => {

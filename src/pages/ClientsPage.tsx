@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -54,20 +54,13 @@ interface ClientFormProps {
 function ClientForm({ open, client, onClose, locale }: ClientFormProps) {
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
-  const [name, setName] = useState('');
-  const [telephone, setTelephone] = useState('');
+  const [name, setName] = useState(client?.name ?? '');
+  const [telephone, setTelephone] = useState(client?.telephone ?? '');
 
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
 
   const saving = createClient.isPending || updateClient.isPending;
-
-  useEffect(() => {
-    if (open) {
-      setName(client?.name ?? '');
-      setTelephone(client?.telephone ?? '');
-    }
-  }, [open, client]);
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -324,6 +317,7 @@ export default function ClientsPage() {
       </Box>
 
       <ClientForm
+        key={editingClient?.id ?? 'new'}
         open={formOpen}
         client={editingClient}
         onClose={() => setFormOpen(false)}
