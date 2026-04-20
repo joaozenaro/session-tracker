@@ -1,4 +1,4 @@
-import { useEffect, type MouseEvent } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -10,6 +10,8 @@ import FormatBoldIcon from '@mui/icons-material/FormatBold';
 import FormatItalicIcon from '@mui/icons-material/FormatItalic';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
 interface RichTextEditorProps {
   value: string;
@@ -32,6 +34,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     },
   });
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   useEffect(() => {
     if (!editor) return;
     const current = editor.getHTML();
@@ -47,6 +51,114 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       editor?.commands.focus();
     };
   };
+
+  const toggleFullscreen = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setIsFullscreen((current) => !current);
+  };
+
+  // Shared toolbar button group — reused in both normal and fullscreen modes
+  const toolbar = (
+    <ButtonGroup
+      variant="outlined"
+      size="small"
+      aria-label="notes editor toolbar"
+      sx={{
+        borderColor: 'divider',
+        '& .MuiButtonGroup-grouped': { borderColor: 'divider' },
+        '& .MuiButtonGroup-grouped:not(:last-of-type)': { borderRightColor: 'divider' },
+      }}
+    >
+      <Button
+        onMouseDown={applyMark(() => editor?.chain().focus().toggleBold().run())}
+        color={editor?.isActive('bold') ? 'primary' : 'inherit'}
+      >
+        <FormatBoldIcon fontSize="small" />
+      </Button>
+      <Button
+        onMouseDown={applyMark(() => editor?.chain().focus().toggleItalic().run())}
+        color={editor?.isActive('italic') ? 'primary' : 'inherit'}
+      >
+        <FormatItalicIcon fontSize="small" />
+      </Button>
+      <Button
+        onMouseDown={applyMark(() => editor?.chain().focus().toggleBulletList().run())}
+        color={editor?.isActive('bulletList') ? 'primary' : 'inherit'}
+      >
+        <FormatListBulletedIcon fontSize="small" />
+      </Button>
+      <Button
+        onMouseDown={applyMark(() => editor?.chain().focus().toggleOrderedList().run())}
+        color={editor?.isActive('orderedList') ? 'primary' : 'inherit'}
+      >
+        <FormatListNumberedIcon fontSize="small" />
+      </Button>
+      <Button onMouseDown={toggleFullscreen} color={isFullscreen ? 'primary' : 'inherit'}>
+        {isFullscreen ? (
+          <FullscreenExitIcon fontSize="small" />
+        ) : (
+          <FullscreenIcon fontSize="small" />
+        )}
+      </Button>
+    </ButtonGroup>
+  );
+
+  const editorContent = (
+    <Box
+      sx={{
+        px: 2,
+        py: 2,
+        flexGrow: 1,
+        overflowY: 'auto',
+        '& .ProseMirror': {
+          minHeight: 180,
+          outline: 'none',
+          fontSize: '0.95rem',
+          lineHeight: 1.75,
+          padding: 0,
+        },
+        '& .ProseMirror p': { margin: 0 },
+        '& .ProseMirror p.is-editor-empty:first-child::before': {
+          content: 'attr(data-placeholder)',
+          float: 'left',
+          height: 0,
+          color: 'rgba(0, 0, 0, 0.38)',
+          pointerEvents: 'none',
+        },
+      }}
+    >
+      <EditorContent editor={editor} />
+    </Box>
+  );
+
+  // Fullscreen overlay
+  if (isFullscreen) {
+    return (
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1300,
+          bgcolor: 'background.paper',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            borderBottom: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.default',
+          }}
+        >
+          {toolbar}
+        </Box>
+        {editorContent}
+      </Box>
+    );
+  }
 
   return (
     <Paper
@@ -71,73 +183,9 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
           bgcolor: 'background.default',
         }}
       >
-        <ButtonGroup
-          variant="outlined"
-          size="small"
-          aria-label="notes editor toolbar"
-          sx={{
-            borderColor: 'divider',
-            '& .MuiButtonGroup-grouped': {
-              borderColor: 'divider',
-            },
-            '& .MuiButtonGroup-grouped:not(:last-of-type)': {
-              borderRightColor: 'divider',
-            },
-          }}
-        >
-          <Button
-            onMouseDown={applyMark(() => editor?.chain().focus().toggleBold().run())}
-            color={editor?.isActive('bold') ? 'primary' : 'inherit'}
-          >
-            <FormatBoldIcon fontSize="small" />
-          </Button>
-          <Button
-            onMouseDown={applyMark(() => editor?.chain().focus().toggleItalic().run())}
-            color={editor?.isActive('italic') ? 'primary' : 'inherit'}
-          >
-            <FormatItalicIcon fontSize="small" />
-          </Button>
-          <Button
-            onMouseDown={applyMark(() => editor?.chain().focus().toggleBulletList().run())}
-            color={editor?.isActive('bulletList') ? 'primary' : 'inherit'}
-          >
-            <FormatListBulletedIcon fontSize="small" />
-          </Button>
-          <Button
-            onMouseDown={applyMark(() => editor?.chain().focus().toggleOrderedList().run())}
-            color={editor?.isActive('orderedList') ? 'primary' : 'inherit'}
-          >
-            <FormatListNumberedIcon fontSize="small" />
-          </Button>
-        </ButtonGroup>
+        {toolbar}
       </Box>
-      <Box
-        sx={{
-          px: 2,
-          py: 2,
-          flexGrow: 1,
-          overflowY: 'auto',
-          '& .ProseMirror': {
-            minHeight: 180,
-            outline: 'none',
-            fontSize: '0.95rem',
-            lineHeight: 1.75,
-            padding: 0,
-          },
-          '& .ProseMirror p': {
-            margin: 0,
-          },
-          '& .ProseMirror p.is-editor-empty:first-child::before': {
-            content: 'attr(data-placeholder)',
-            float: 'left',
-            height: 0,
-            color: 'rgba(0, 0, 0, 0.38)',
-            pointerEvents: 'none',
-          },
-        }}
-      >
-        <EditorContent editor={editor} />
-      </Box>
+      {editorContent}
     </Paper>
   );
 }
