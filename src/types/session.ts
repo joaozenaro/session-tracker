@@ -41,3 +41,10 @@ export interface ExtendSeriesPayload {
   num_sessions: number;
   session_time: string;
 }
+
+export interface SessionsByClientPayload {
+  client_id: string;
+  before_date: string;
+  exclude_id?: string | null;
+  limit: number;
+}

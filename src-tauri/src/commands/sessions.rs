@@ -1,16 +1,16 @@
+use chrono::{Months, NaiveDate, Utc};
 use diesel::prelude::*;
 use tauri::State;
 use uuid::Uuid;
-use chrono::{Months, NaiveDate, Utc};
 
+use super::blocking;
 use crate::db::DbPool;
 use crate::error::{AppError, CmdResult};
 use crate::models::{
     Client, CreateSeriesPayload, ExtendSeriesPayload, NewSession, RecurrenceType, Session,
-    SessionInsert, SessionSeries, SessionUpdate, SessionWithClient,
+    SessionInsert, SessionSeries, SessionUpdate, SessionWithClient, SessionsByClientPayload,
 };
 use crate::schema::{clients, session_series, sessions};
-use super::blocking;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -41,10 +41,7 @@ pub async fn get_sessions(pool: State<'_, DbPool>) -> CmdResult<Vec<SessionWithC
     blocking!(pool, |conn: &mut SqliteConnection| {
         let rows: Vec<(Session, Client)> = sessions::table
             .inner_join(clients::table)
-            .order((
-                sessions::session_date.desc(),
-                sessions::session_time.asc(),
-            ))
+            .order((sessions::session_date.desc(), sessions::session_time.asc()))
             .select((Session::as_select(), Client::as_select()))
             .load(conn)
             .map_err(AppError::from)?;
@@ -52,15 +49,15 @@ pub async fn get_sessions(pool: State<'_, DbPool>) -> CmdResult<Vec<SessionWithC
         Ok(rows
             .into_iter()
             .map(|(s, c)| SessionWithClient {
-                id:           s.id,
-                client_id:    s.client_id,
+                id: s.id,
+                client_id: s.client_id,
                 session_date: s.session_date,
                 session_time: s.session_time,
-                notes:        s.notes,
-                series_id:    s.series_id,
-                created_at:   s.created_at,
-                updated_at:   s.updated_at,
-                client:       c,
+                notes: s.notes,
+                series_id: s.series_id,
+                created_at: s.created_at,
+                updated_at: s.updated_at,
+                client: c,
             })
             .collect())
     })
@@ -69,22 +66,19 @@ pub async fn get_sessions(pool: State<'_, DbPool>) -> CmdResult<Vec<SessionWithC
 #[tauri::command]
 pub async fn get_sessions_by_client(
     pool: State<'_, DbPool>,
-    client_id: String,
-    before_date: String,
-    exclude_id: Option<String>,
-    limit: i64,
+    payload: SessionsByClientPayload,
 ) -> CmdResult<Vec<Session>> {
     let pool = pool.inner().clone();
     blocking!(pool, |conn: &mut SqliteConnection| {
         let mut query = sessions::table
-            .filter(sessions::client_id.eq(&client_id))
-            .filter(sessions::session_date.lt(&before_date))
+            .filter(sessions::client_id.eq(&payload.client_id))
+            .filter(sessions::session_date.lt(&payload.before_date))
             .order(sessions::session_date.desc())
-            .limit(limit)
+            .limit(payload.limit)
             .select(Session::as_select())
             .into_boxed();
 
-        if let Some(ref eid) = exclude_id {
+        if let Some(ref eid) = payload.exclude_id {
             query = query.filter(sessions::id.ne(eid));
         }
 
@@ -95,22 +89,19 @@ pub async fn get_sessions_by_client(
 // ── Mutations ─────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn create_session(
-    pool: State<'_, DbPool>,
-    payload: SessionInsert,
-) -> CmdResult<Session> {
+pub async fn create_session(pool: State<'_, DbPool>, payload: SessionInsert) -> CmdResult<Session> {
     let pool = pool.inner().clone();
     blocking!(pool, |conn: &mut SqliteConnection| {
         let ts = now();
         let new = NewSession {
-            id:           Uuid::new_v4().to_string(),
-            client_id:    payload.client_id,
+            id: Uuid::new_v4().to_string(),
+            client_id: payload.client_id,
             session_date: payload.session_date,
             session_time: payload.session_time,
-            notes:        payload.notes,
-            series_id:    payload.series_id,
-            created_at:   ts.clone(),
-            updated_at:   ts,
+            notes: payload.notes,
+            series_id: payload.series_id,
+            created_at: ts.clone(),
+            updated_at: ts,
         };
         diesel::insert_into(sessions::table)
             .values(&new)
@@ -169,10 +160,10 @@ pub async fn create_session_series(
     let pool = pool.inner().clone();
     blocking!(pool, |conn: &mut SqliteConnection| {
         let series = SessionSeries {
-            id:              Uuid::new_v4().to_string(),
-            client_id:       payload.client_id.clone(),
+            id: Uuid::new_v4().to_string(),
+            client_id: payload.client_id.clone(),
             recurrence_type: payload.recurrence_type.as_str().to_owned(),
-            created_at:      now(),
+            created_at: now(),
         };
         diesel::insert_into(session_series::table)
             .values(&series)
@@ -183,8 +174,8 @@ pub async fn create_session_series(
         for i in 0..payload.num_sessions {
             let ts = now();
             let new = NewSession {
-                id:           Uuid::new_v4().to_string(),
-                client_id:    payload.client_id.clone(),
+                id: Uuid::new_v4().to_string(),
+                client_id: payload.client_id.clone(),
                 session_date: current_date.clone(),
                 session_time: payload.start_time.clone(),
                 notes: if i == 0 {
@@ -192,7 +183,7 @@ pub async fn create_session_series(
                 } else {
                     String::new()
                 },
-                series_id:  Some(series.id.clone()),
+                series_id: Some(series.id.clone()),
                 created_at: ts.clone(),
                 updated_at: ts,
             };
@@ -224,14 +215,14 @@ pub async fn extend_session_series(
         for _ in 0..payload.num_sessions {
             let ts = now();
             let new = NewSession {
-                id:           Uuid::new_v4().to_string(),
-                client_id:    series.client_id.clone(),
+                id: Uuid::new_v4().to_string(),
+                client_id: series.client_id.clone(),
                 session_date: current_date.clone(),
                 session_time: payload.session_time.clone(),
-                notes:        String::new(),
-                series_id:    Some(payload.series_id.clone()),
-                created_at:   ts.clone(),
-                updated_at:   ts,
+                notes: String::new(),
+                series_id: Some(payload.series_id.clone()),
+                created_at: ts.clone(),
+                updated_at: ts,
             };
             diesel::insert_into(sessions::table)
                 .values(&new)

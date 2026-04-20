@@ -29,7 +29,13 @@ export function useSessions() {
 export function useSessionsByClient(clientId: string, beforeDate: string, excludeId?: string) {
   return useQuery({
     queryKey: sessionKeys.byClient(clientId, beforeDate, excludeId),
-    queryFn: () => sessionService.getSessionsByClient(clientId, beforeDate, excludeId),
+    queryFn: () =>
+      sessionService.getSessionsByClient({
+        client_id: clientId,
+        before_date: beforeDate,
+        exclude_id: excludeId ?? null,
+        limit: 5,
+      }),
     enabled: !!clientId && !!beforeDate,
   });
 }

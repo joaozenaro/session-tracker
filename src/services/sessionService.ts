@@ -7,6 +7,7 @@ import type {
   SessionSeries,
   CreateSeriesPayload,
   ExtendSeriesPayload,
+  SessionsByClientPayload,
 } from '../types/session';
 
 /**
@@ -37,18 +38,8 @@ export const sessionService = {
    * before `beforeDate` (YYYY-MM-DD), excluding `excludeId` if given.
    * Ordered session_date DESC, limited to `limit` rows.
    */
-  getSessionsByClient(
-    clientId: string,
-    beforeDate: string,
-    excludeId?: string,
-    limit = 5
-  ): Promise<Session[]> {
-    return tauriInvoke<Session[]>('get_sessions_by_client', {
-      client_id: clientId,
-      before_date: beforeDate,
-      exclude_id: excludeId ?? null,
-      limit,
-    });
+  getSessionsByClient(payload: SessionsByClientPayload): Promise<Session[]> {
+    return tauriInvoke<Session[]>('get_sessions_by_client', { payload });
   },
 
   /** Create a single session and return the created row. */

@@ -44,12 +44,23 @@ interface SessionDrawerProps {
 
 function formatDate(dateStr: string, locale: string = 'en-US') {
   const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(locale, {
+  const date = new Date(year, month - 1, day);
+
+  const parts = new Intl.DateTimeFormat(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  });
+  }).formatToParts(date);
+
+  return parts
+    .map((part) => {
+      if (part.type === 'weekday' || part.type === 'month') {
+        part.value = part.value.charAt(0).toUpperCase() + part.value.slice(1);
+      }
+      return part.value;
+    })
+    .join('');
 }
 
 function formatTime(timeStr: string) {
