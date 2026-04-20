@@ -97,8 +97,9 @@ export default function CalendarPage() {
   };
 
   const handleDayClick = (dateStr: string) => {
-    setCurrentDate(parseLocalDate(dateStr));
-    setView('day');
+    setEditingSession(null);
+    setDrawerInitialDate(dateStr);
+    setDrawerOpen(true);
   };
 
   const handleSessionClick = (session: SessionWithClient) => {
@@ -224,7 +225,7 @@ export default function CalendarPage() {
       </Box>
 
       <SessionDrawer
-        key={editingSession?.id ?? 'new'}
+        key={`${editingSession?.id ?? 'new'}-${drawerInitialDate}`}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         initialDate={drawerInitialDate}
