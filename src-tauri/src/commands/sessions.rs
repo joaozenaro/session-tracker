@@ -9,6 +9,7 @@ use crate::error::{AppError, CmdResult};
 use crate::models::{
     Client, CreateSeriesPayload, ExtendSeriesPayload, NewSession, RecurrenceType, Session,
     SessionInsert, SessionSeries, SessionUpdate, SessionWithClient, SessionsByClientPayload,
+    SessionsByClientResponse,
 };
 use crate::schema::{clients, session_series, sessions};
 
@@ -31,6 +32,42 @@ fn advance_date(date_str: &str, rec: &RecurrenceType) -> CmdResult<String> {
             .ok_or_else(|| AppError::Validation("date overflow adding one month".into()))?,
     };
     Ok(next.format("%Y-%m-%d").to_string())
+}
+
+/// Helper to generate a sequence of sessions for a series.
+fn generate_series_sessions(
+    client_id: String,
+    series_id: String,
+    first_date: String,
+    time: String,
+    recurrence: &RecurrenceType,
+    num_sessions: u32,
+    initial_notes: Option<String>,
+) -> CmdResult<Vec<NewSession>> {
+    let mut sessions = Vec::with_capacity(num_sessions as usize);
+    let mut current_date = first_date;
+    let ts = now();
+
+    for i in 0..num_sessions {
+        sessions.push(NewSession {
+            id: Uuid::new_v4().to_string(),
+            client_id: client_id.clone(),
+            session_date: current_date.clone(),
+            session_time: time.clone(),
+            notes: if i == 0 {
+                initial_notes.clone().unwrap_or_default()
+            } else {
+                String::new()
+            },
+            series_id: Some(series_id.clone()),
+            created_at: ts.clone(),
+            updated_at: ts.clone(),
+        });
+        if i < num_sessions - 1 {
+            current_date = advance_date(&current_date, recurrence)?;
+        }
+    }
+    Ok(sessions)
 }
 
 // ── Queries ───────────────────────────────────────────────────────────────────
@@ -67,7 +104,7 @@ pub async fn get_sessions(pool: State<'_, DbPool>) -> CmdResult<Vec<SessionWithC
 pub async fn get_sessions_by_client(
     pool: State<'_, DbPool>,
     payload: SessionsByClientPayload,
-) -> CmdResult<Vec<Session>> {
+) -> CmdResult<SessionsByClientResponse> {
     let pool = pool.inner().clone();
     blocking!(pool, |conn: &mut SqliteConnection| {
         let mut query = sessions::table
@@ -82,7 +119,36 @@ pub async fn get_sessions_by_client(
             query = query.filter(sessions::id.ne(eid));
         }
 
-        query.load(conn).map_err(AppError::from)
+        let loaded_sessions = query.load(conn).map_err(AppError::from)?;
+
+        let mut is_last_in_series = false;
+        if let Some(ref eid) = payload.exclude_id {
+            // Find the current session being edited
+            if let Ok(current_session) = sessions::table.find(eid).first::<Session>(conn) {
+                if let Some(ref sid) = current_session.series_id {
+                    // Check if any other session in the same series is later
+                    let count = sessions::table
+                        .filter(sessions::series_id.eq(sid))
+                        .filter(
+                            sessions::session_date.gt(&current_session.session_date).or(
+                                sessions::session_date
+                                    .eq(&current_session.session_date)
+                                    .and(sessions::session_time.gt(&current_session.session_time)),
+                            ),
+                        )
+                        .count()
+                        .get_result::<i64>(conn)
+                        .unwrap_or(0);
+
+                    is_last_in_series = count == 0;
+                }
+            }
+        }
+
+        Ok(SessionsByClientResponse {
+            sessions: loaded_sessions,
+            is_last_in_series,
+        })
     })
 }
 
@@ -165,36 +231,29 @@ pub async fn create_session_series(
             recurrence_type: payload.recurrence_type.as_str().to_owned(),
             created_at: now(),
         };
-        diesel::insert_into(session_series::table)
-            .values(&series)
-            .execute(conn)
-            .map_err(AppError::from)?;
 
-        let mut current_date = payload.start_date.clone();
-        for i in 0..payload.num_sessions {
-            let ts = now();
-            let new = NewSession {
-                id: Uuid::new_v4().to_string(),
-                client_id: payload.client_id.clone(),
-                session_date: current_date.clone(),
-                session_time: payload.start_time.clone(),
-                notes: if i == 0 {
-                    payload.notes.clone().unwrap_or_default()
-                } else {
-                    String::new()
-                },
-                series_id: Some(series.id.clone()),
-                created_at: ts.clone(),
-                updated_at: ts,
-            };
+        let new_sessions = generate_series_sessions(
+            payload.client_id,
+            series.id.clone(),
+            payload.start_date,
+            payload.start_time,
+            &payload.recurrence_type,
+            payload.num_sessions,
+            payload.notes,
+        )?;
+
+        conn.transaction::<_, diesel::result::Error, _>(|conn| {
+            diesel::insert_into(session_series::table)
+                .values(&series)
+                .execute(conn)?;
+
             diesel::insert_into(sessions::table)
-                .values(&new)
-                .execute(conn)
-                .map_err(AppError::from)?;
-            current_date = advance_date(&current_date, &payload.recurrence_type)?;
-        }
+                .values(&new_sessions)
+                .execute(conn)?;
 
-        Ok(series)
+            Ok(series)
+        })
+        .map_err(AppError::from)
     })
 }
 
@@ -211,25 +270,21 @@ pub async fn extend_session_series(
             .first(conn)
             .map_err(AppError::from)?;
 
-        let mut current_date = advance_date(&payload.from_date, &payload.recurrence_type)?;
-        for _ in 0..payload.num_sessions {
-            let ts = now();
-            let new = NewSession {
-                id: Uuid::new_v4().to_string(),
-                client_id: series.client_id.clone(),
-                session_date: current_date.clone(),
-                session_time: payload.session_time.clone(),
-                notes: String::new(),
-                series_id: Some(payload.series_id.clone()),
-                created_at: ts.clone(),
-                updated_at: ts,
-            };
-            diesel::insert_into(sessions::table)
-                .values(&new)
-                .execute(conn)
-                .map_err(AppError::from)?;
-            current_date = advance_date(&current_date, &payload.recurrence_type)?;
-        }
-        Ok(())
+        let first_new_date = advance_date(&payload.from_date, &payload.recurrence_type)?;
+        let new_sessions = generate_series_sessions(
+            series.client_id,
+            payload.series_id,
+            first_new_date,
+            payload.session_time,
+            &payload.recurrence_type,
+            payload.num_sessions,
+            None,
+        )?;
+
+        diesel::insert_into(sessions::table)
+            .values(&new_sessions)
+            .execute(conn)
+            .map(|_| ())
+            .map_err(AppError::from)
     })
 }

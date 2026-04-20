@@ -48,3 +48,8 @@ export interface SessionsByClientPayload {
   exclude_id?: string | null;
   limit: number;
 }
+
+export interface SessionsByClientResponse {
+  sessions: Session[];
+  is_last_in_series: boolean;
+}

@@ -27,7 +27,7 @@ export function useSessions() {
  * Only runs when `clientId` and `beforeDate` are non-empty.
  */
 export function useSessionsByClient(clientId: string, beforeDate: string, excludeId?: string) {
-  return useQuery({
+  const query = useQuery({
     queryKey: sessionKeys.byClient(clientId, beforeDate, excludeId),
     queryFn: () =>
       sessionService.getSessionsByClient({
@@ -38,6 +38,12 @@ export function useSessionsByClient(clientId: string, beforeDate: string, exclud
       }),
     enabled: !!clientId && !!beforeDate,
   });
+
+  return {
+    ...query,
+    data: query.data?.sessions ?? [],
+    isLastInSeries: query.data?.is_last_in_series ?? false,
+  };
 }
 
 // ── Mutations ─────────────────────────────────────────────────────────────────

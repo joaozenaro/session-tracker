@@ -10,7 +10,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import Collapse from '@mui/material/Collapse';
@@ -90,10 +89,8 @@ export default function SessionDrawer({
   const [expandedPrev, setExpandedPrev] = useState<string | null>(null);
 
   const [showSeriesOptions, setShowSeriesOptions] = useState(false);
-  const [createSeries, setCreateSeries] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [numSessions, setNumSessions] = useState(4);
-  const [isLastInSeries, setIsLastInSeries] = useState(false);
 
   const isEditing = !!session;
 
@@ -111,18 +108,18 @@ export default function SessionDrawer({
 
   // ── Previous sessions query ─────────────────────────────────────────────────
   // Only enabled when a client and date are selected and drawer is open.
-  const { data: prevSessions = [], isLoading: loadingPrev } = useSessionsByClient(
-    open ? clientId : '',
-    date,
-    session?.id
-  );
+  const {
+    data: prevSessions = [],
+    isLoading: loadingPrev,
+    isLastInSeries,
+  } = useSessionsByClient(open ? clientId : '', date, session?.id);
 
   // ── Save handler ────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!clientId || !date || !time) return;
 
     try {
-      if (createSeries && !isEditing) {
+      if (showSeriesOptions && !isEditing) {
         // Create series + bulk sessions in one Rust command
         await createSessionSeries.mutateAsync({
           client_id: clientId,
@@ -132,23 +129,6 @@ export default function SessionDrawer({
           num_sessions: numSessions,
           notes,
         });
-      } else if (isLastInSeries && isEditing && session?.series_id) {
-        // First save the current session, then extend
-        const payload: SessionInsert = {
-          client_id: clientId,
-          session_date: date,
-          session_time: time,
-          notes,
-          series_id: session.series_id,
-        };
-        await updateSession.mutateAsync({ id: session.id, payload });
-        await extendSessionSeries.mutateAsync({
-          series_id: session.series_id,
-          from_date: date,
-          recurrence_type: recurrenceType,
-          num_sessions: numSessions,
-          session_time: time,
-        });
       } else {
         const payload: SessionInsert = {
           client_id: clientId,
@@ -157,8 +137,20 @@ export default function SessionDrawer({
           notes,
           series_id: session?.series_id ?? null,
         };
+
         if (isEditing) {
           await updateSession.mutateAsync({ id: session.id, payload });
+
+          // If extend series was toggled during edit, also trigger extension
+          if (showSeriesOptions && session.series_id) {
+            await extendSessionSeries.mutateAsync({
+              series_id: session.series_id,
+              from_date: date,
+              recurrence_type: recurrenceType,
+              num_sessions: numSessions,
+              session_time: time,
+            });
+          }
         } else {
           await createSession.mutateAsync(payload);
         }
@@ -270,70 +262,57 @@ export default function SessionDrawer({
                 {t(locale, 'createRecurringSessions')}
               </Button>
               <Collapse in={showSeriesOptions}>
-                <Box sx={{ pt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={createSeries}
-                        onChange={(e) => setCreateSeries(e.target.checked)}
+                <Box sx={{ pt: 0.5, pb: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
+                    >
+                      {t(locale, 'recurrence')}
+                    </Typography>
+                    <RadioGroup
+                      value={recurrenceType}
+                      onChange={(e) =>
+                        setRecurrenceType(e.target.value as 'weekly' | 'biweekly' | 'monthly')
+                      }
+                      row
+                      sx={{ gap: 2 }}
+                    >
+                      <FormControlLabel
+                        value="weekly"
+                        control={<Radio size="small" />}
+                        label={t(locale, 'weekly')}
                       />
-                    }
-                    label={t(locale, 'createSeriesOfSessions')}
+                      <FormControlLabel
+                        value="biweekly"
+                        control={<Radio size="small" />}
+                        label={t(locale, 'biweekly')}
+                      />
+                      <FormControlLabel
+                        value="monthly"
+                        control={<Radio size="small" />}
+                        label={t(locale, 'monthly')}
+                      />
+                    </RadioGroup>
+                  </Box>
+                  <TextField
+                    label={t(locale, 'numberOfSessions')}
+                    type="number"
+                    value={numSessions}
+                    onChange={(e) => setNumSessions(Math.max(1, parseInt(e.target.value) || 1))}
+                    size="small"
+                    slotProps={{ htmlInput: { min: 1, max: 52 } }}
                   />
-                  {createSeries && (
-                    <>
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
-                        >
-                          {t(locale, 'recurrence')}
-                        </Typography>
-                        <RadioGroup
-                          value={recurrenceType}
-                          onChange={(e) =>
-                            setRecurrenceType(e.target.value as 'weekly' | 'biweekly' | 'monthly')
-                          }
-                          row
-                          sx={{ gap: 2 }}
-                        >
-                          <FormControlLabel
-                            value="weekly"
-                            control={<Radio size="small" />}
-                            label={t(locale, 'weekly')}
-                          />
-                          <FormControlLabel
-                            value="biweekly"
-                            control={<Radio size="small" />}
-                            label={t(locale, 'biweekly')}
-                          />
-                          <FormControlLabel
-                            value="monthly"
-                            control={<Radio size="small" />}
-                            label={t(locale, 'monthly')}
-                          />
-                        </RadioGroup>
-                      </Box>
-                      <TextField
-                        label={t(locale, 'numberOfSessions')}
-                        type="number"
-                        value={numSessions}
-                        onChange={(e) => setNumSessions(Math.max(1, parseInt(e.target.value) || 1))}
-                        size="small"
-                        slotProps={{ htmlInput: { min: 1, max: 52 } }}
-                      />
-                      <Typography variant="caption" color="text.secondary">
-                        {t(locale, 'willCreate').replace('{count}', numSessions.toString())}
-                      </Typography>
-                    </>
-                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    {t(locale, 'willCreate').replace('{count}', numSessions.toString())}
+                  </Typography>
                 </Box>
               </Collapse>
             </Box>
           </>
         )}
 
-        {isEditing && session?.series_id && (
+        {isEditing && session?.series_id && isLastInSeries && (
           <>
             <Divider sx={{ mx: 2.5 }} />
             <Box sx={{ px: 2.5, pt: 1.5, pb: 1.5 }}>
@@ -346,63 +325,50 @@ export default function SessionDrawer({
                 {t(locale, 'extendSeries')}
               </Button>
               <Collapse in={showSeriesOptions}>
-                <Box sx={{ pt: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={isLastInSeries}
-                        onChange={(e) => setIsLastInSeries(e.target.checked)}
+                <Box sx={{ pt: 0.5, pb: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
+                    >
+                      {t(locale, 'recurrence')}
+                    </Typography>
+                    <RadioGroup
+                      value={recurrenceType}
+                      onChange={(e) =>
+                        setRecurrenceType(e.target.value as 'weekly' | 'biweekly' | 'monthly')
+                      }
+                      row
+                      sx={{ gap: 2 }}
+                    >
+                      <FormControlLabel
+                        value="weekly"
+                        control={<Radio size="small" />}
+                        label={t(locale, 'weekly')}
                       />
-                    }
-                    label={t(locale, 'extendSeriesFromSession')}
+                      <FormControlLabel
+                        value="biweekly"
+                        control={<Radio size="small" />}
+                        label={t(locale, 'biweekly')}
+                      />
+                      <FormControlLabel
+                        value="monthly"
+                        control={<Radio size="small" />}
+                        label={t(locale, 'monthly')}
+                      />
+                    </RadioGroup>
+                  </Box>
+                  <TextField
+                    label={t(locale, 'numberOfSessionsToAdd')}
+                    type="number"
+                    value={numSessions}
+                    onChange={(e) => setNumSessions(Math.max(1, parseInt(e.target.value) || 1))}
+                    size="small"
+                    inputProps={{ min: 1, max: 52 }}
                   />
-                  {isLastInSeries && (
-                    <>
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
-                        >
-                          {t(locale, 'recurrence')}
-                        </Typography>
-                        <RadioGroup
-                          value={recurrenceType}
-                          onChange={(e) =>
-                            setRecurrenceType(e.target.value as 'weekly' | 'biweekly' | 'monthly')
-                          }
-                          row
-                          sx={{ gap: 2 }}
-                        >
-                          <FormControlLabel
-                            value="weekly"
-                            control={<Radio size="small" />}
-                            label={t(locale, 'weekly')}
-                          />
-                          <FormControlLabel
-                            value="biweekly"
-                            control={<Radio size="small" />}
-                            label={t(locale, 'biweekly')}
-                          />
-                          <FormControlLabel
-                            value="monthly"
-                            control={<Radio size="small" />}
-                            label={t(locale, 'monthly')}
-                          />
-                        </RadioGroup>
-                      </Box>
-                      <TextField
-                        label={t(locale, 'numberOfSessionsToAdd')}
-                        type="number"
-                        value={numSessions}
-                        onChange={(e) => setNumSessions(Math.max(1, parseInt(e.target.value) || 1))}
-                        size="small"
-                        inputProps={{ min: 1, max: 52 }}
-                      />
-                      <Typography variant="caption" color="text.secondary">
-                        {t(locale, 'willAdd').replace('{count}', numSessions.toString())}
-                      </Typography>
-                    </>
-                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    {t(locale, 'willAdd').replace('{count}', numSessions.toString())}
+                  </Typography>
                 </Box>
               </Collapse>
             </Box>

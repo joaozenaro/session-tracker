@@ -134,3 +134,10 @@ pub struct SessionsByClientPayload {
     pub exclude_id: Option<String>,
     pub limit: i64,
 }
+
+/// Response returned to JS for `get_sessions_by_client`
+#[derive(Debug, Serialize)]
+pub struct SessionsByClientResponse {
+    pub sessions: Vec<Session>,
+    pub is_last_in_series: bool,
+}
