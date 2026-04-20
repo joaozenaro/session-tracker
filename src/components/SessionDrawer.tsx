@@ -23,6 +23,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import EventRepeatIcon from '@mui/icons-material/EventRepeat';
 import { useAppContext } from '../lib/AppContext';
+import RichTextEditor from './RichTextEditor';
 import { t } from '../lib/i18n';
 import type { Client, Session, SessionInsert } from '../lib/types';
 import {
@@ -238,30 +239,10 @@ export default function SessionDrawer({
           <Typography variant="overline" sx={{ color: 'text.secondary', mb: 1, letterSpacing: 1 }}>
             {t(locale, 'sessionNotes')}
           </Typography>
-          <TextField
-            multiline
-            fullWidth
-            placeholder={t(locale, 'sessionNotesPlaceholder')}
+          <RichTextEditor
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            variant="outlined"
-            sx={{
-              flexGrow: 1,
-              '& .MuiInputBase-root': {
-                alignItems: 'flex-start',
-                minHeight: 200,
-                fontSize: '0.95rem',
-                lineHeight: 1.7,
-              },
-            }}
-            slotProps={{
-              input: {
-                sx: {
-                  minHeight: 200,
-                  alignItems: 'flex-start',
-                },
-              },
-            }}
+            onChange={setNotes}
+            placeholder={t(locale, 'sessionNotesPlaceholder')}
           />
         </Box>
 
@@ -485,11 +466,11 @@ export default function SessionDrawer({
                     >
                       {prev.notes ? (
                         <Typography
+                          component="div"
                           variant="body2"
-                          sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.75, color: 'text.secondary' }}
-                        >
-                          {prev.notes}
-                        </Typography>
+                          sx={{ lineHeight: 1.75, color: 'text.secondary' }}
+                          dangerouslySetInnerHTML={{ __html: prev.notes }}
+                        />
                       ) : (
                         <Typography
                           variant="body2"

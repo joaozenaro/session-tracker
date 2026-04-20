@@ -88,3 +88,13 @@ export function formatTime12(timeStr: string): string {
   const hour = h % 12 || 12;
   return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
 }
+
+export function stripHtml(html: string): string {
+  const text = html.replace(/<[^>]*>/g, ' ');
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+export function htmlSnippet(html: string, length: number): string {
+  const text = stripHtml(html);
+  return text.length <= length ? text : `${text.slice(0, length).trim()}…`;
+}

@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import Avatar from '@mui/material/Avatar';
-import { formatTime12 } from '../../lib/calendarUtils';
+import { formatTime12, stripHtml } from '../../lib/calendarUtils';
 import type { SessionWithClient } from '../../lib/types';
 import { t } from '../../lib/i18n';
 import { useAppContext } from '../../lib/AppContext';
@@ -98,7 +98,7 @@ export default function DayView({ sessions, onSessionClick }: DayViewProps) {
                     lineHeight: 1.65,
                   }}
                 >
-                  {session.notes}
+                  {stripHtml(session.notes).slice(0, 120)}
                 </Typography>
               ) : (
                 <Typography

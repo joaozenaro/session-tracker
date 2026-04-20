@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import { toLocalDateString, formatTime12 } from '../../lib/calendarUtils';
+import { toLocalDateString, formatTime12, stripHtml } from '../../lib/calendarUtils';
 import type { SessionWithClient } from '../../lib/types';
 
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -179,7 +179,7 @@ export default function WeekView({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {s.notes.slice(0, 60)}
+                      {stripHtml(s.notes).slice(0, 60)}
                     </Typography>
                   )}
                 </Paper>

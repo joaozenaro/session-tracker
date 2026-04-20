@@ -24,6 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
+import { htmlSnippet } from '../lib/calendarUtils';
 import type { Session, SessionWithClient } from '../types/session';
 import SessionDrawer from '../components/SessionDrawer';
 import { useSessions } from '../hooks/useSessions';
@@ -278,7 +279,7 @@ export default function SessionsPage() {
                         lineHeight: 1.6,
                       }}
                     >
-                      {session.notes}
+                      {htmlSnippet(session.notes, 140)}
                     </Typography>
                   ) : (
                     <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic' }}>
