@@ -20,6 +20,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import PeopleIcon from '@mui/icons-material/People';
 import MenuIcon from '@mui/icons-material/Menu';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import SpaIcon from '@mui/icons-material/Spa';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -62,6 +63,7 @@ export default function Layout({ children }: LayoutProps) {
       icon: <TableRowsIcon />,
     },
     { label: t(locale, 'clients'), path: '/clients', icon: <PeopleIcon /> },
+    { label: t(locale, 'templates'), path: '/templates', icon: <AssignmentIcon /> },
   ];
 
   const handleNavClick = (path: string) => {

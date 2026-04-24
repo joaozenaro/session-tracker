@@ -20,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PhoneIcon from '@mui/icons-material/Phone';
 import CloseIcon from '@mui/icons-material/Close';
 import PersonIcon from '@mui/icons-material/Person';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import { MuiTelInput } from 'mui-tel-input';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
@@ -32,6 +33,7 @@ import {
   useUpdateClient,
   useDeleteClient,
 } from '../hooks/useClients';
+import ClientFormsDrawer from '../components/forms/ClientFormsDrawer';
 
 function getInitials(name: string) {
   return (
@@ -161,7 +163,9 @@ export default function ClientsPage() {
   const { locale } = useAppContext();
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
+  const [formsDrawerOpen, setFormsDrawerOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [formsClient, setFormsClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading, error } = useClients();
   const { data: sessionCounts = {} } = useSessionCounts();
@@ -180,6 +184,11 @@ export default function ClientsPage() {
   const handleAdd = () => {
     setEditingClient(null);
     setFormOpen(true);
+  };
+
+  const handleOpenForms = (client: Client) => {
+    setFormsClient(client);
+    setFormsDrawerOpen(true);
   };
 
   const filtered = clients.filter(
@@ -301,6 +310,11 @@ export default function ClientsPage() {
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title={t(locale, 'forms')}>
+                    <IconButton size="small" onClick={() => handleOpenForms(client)}>
+                      <AssignmentIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title={t(locale, 'delete')}>
                     <IconButton
                       size="small"
@@ -323,6 +337,12 @@ export default function ClientsPage() {
         client={editingClient}
         onClose={() => setFormOpen(false)}
         locale={locale}
+      />
+
+      <ClientFormsDrawer
+        open={formsDrawerOpen}
+        client={formsClient}
+        onClose={() => setFormsDrawerOpen(false)}
       />
     </Box>
   );
