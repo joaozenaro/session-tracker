@@ -13,6 +13,7 @@ import ClientsPage from './pages/ClientsPage';
 import TemplatesPage from './pages/TemplatesPage';
 import TemplateEditorPage from './pages/TemplateEditorPage';
 import FormFillerPage from './pages/FormFillerPage';
+import { NotificationProvider } from './components/NotificationProvider';
 
 function AppProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark'>(() => {
@@ -48,7 +49,9 @@ function AppProvider({ children }: { children: ReactNode }) {
     >
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        {children}
+        <NotificationProvider>
+          {children}
+        </NotificationProvider>
       </ThemeProvider>
     </AppContext.Provider>
   );

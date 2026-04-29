@@ -126,6 +126,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     savePlan: 'Save Plan',
     saveMedications: 'Save Medications',
     color: 'Color',
+    actionSuccess: 'Action completed successfully',
+    actionError: 'An error occurred',
   },
   pt: {
     calendar: 'Calendário',
@@ -252,6 +254,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     savePlan: 'Salvar Plano',
     saveMedications: 'Salvar Medicações',
     color: 'Cor',
+    actionSuccess: 'Ação concluída com sucesso',
+    actionError: 'Ocorreu um erro',
   },
 };
 
