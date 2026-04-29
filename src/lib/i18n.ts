@@ -69,7 +69,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     createTemplate: 'Create Template',
     noTemplatesFound: 'No templates found.',
     noDescription: 'No description',
-    deleteTemplateConfirm: 'Are you sure you want to delete this template? Any forms copying it will be preserved.',
+    deleteTemplateConfirm:
+      'Are you sure you want to delete this template? Any forms copying it will be preserved.',
     formsFor: 'Forms for',
     fillNewForm: 'Fill a new Form',
     noFormsYet: 'No forms answered yet.',
@@ -197,7 +198,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     createTemplate: 'Criar Modelo',
     noTemplatesFound: 'Nenhum modelo encontrado.',
     noDescription: 'Sem descrição',
-    deleteTemplateConfirm: 'Tem certeza de que deseja excluir este modelo? Quaisquer formulários que o copiem serão preservados.',
+    deleteTemplateConfirm:
+      'Tem certeza de que deseja excluir este modelo? Quaisquer formulários que o copiem serão preservados.',
     formsFor: 'Formulários para',
     fillNewForm: 'Preencher novo formulário',
     noFormsYet: 'Nenhum formulário preenchido ainda.',

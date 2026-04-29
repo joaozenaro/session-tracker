@@ -85,7 +85,7 @@ function ClientForm({ open, client, onClose, locale }: ClientFormProps) {
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    const payload: ClientInsert | any = {
+    const payload: ClientInsert = {
       name: name.trim(),
       telephone: telephone.trim(),
       color,
@@ -454,7 +454,8 @@ export default function ClientsPage() {
                     mt: 'auto',
                     px: 1.5,
                     py: 1,
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'grey.50',
+                    bgcolor:
+                      theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'grey.50',
                     borderTop: 1,
                     borderColor: 'divider',
                     display: 'flex',

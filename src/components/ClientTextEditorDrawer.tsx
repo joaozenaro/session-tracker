@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -32,13 +32,15 @@ export default function ClientTextEditorDrawer({
   const { locale } = useAppContext();
   const updateClient = useUpdateClient();
 
-  const [content, setContent] = useState('');
+  const [prevClient, setPrevClient] = useState(client);
+  const [prevType, setPrevType] = useState(type);
+  const [content, setContent] = useState(client?.[type] || '');
 
-  useEffect(() => {
-    if (client) {
-      setContent(client[type] || '');
-    }
-  }, [client, type, open]);
+  if (client !== prevClient || type !== prevType) {
+    setPrevClient(client);
+    setPrevType(type);
+    setContent(client?.[type] || '');
+  }
 
   const handleSave = async () => {
     if (!client) return;
@@ -84,7 +86,9 @@ export default function ClientTextEditorDrawer({
         </IconButton>
       </Box>
 
-      <Box sx={{ flexGrow: 1, p: 2.5, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Box
+        sx={{ flexGrow: 1, p: 2.5, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      >
         <RichTextEditor
           value={content}
           onChange={setContent}
@@ -103,11 +107,7 @@ export default function ClientTextEditorDrawer({
           disabled={updateClient.isPending}
           disableElevation
         >
-          {updateClient.isPending ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            saveLabel
-          )}
+          {updateClient.isPending ? <CircularProgress size={20} color="inherit" /> : saveLabel}
         </Button>
       </Box>
     </Drawer>

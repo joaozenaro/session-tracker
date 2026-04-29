@@ -33,9 +33,10 @@ import {
 } from '../../hooks/useForms';
 import { useAppContext } from '../../lib/AppContext';
 import { t } from '../../lib/i18n';
+import type { Locale } from '../../lib/i18n';
 
 // Improvement: Per-form completion badge using cached question data
-function FormProgressBadge({ formId, locale }: { formId: string; locale: any }) {
+function FormProgressBadge({ formId, locale }: { formId: string; locale: Locale }) {
   const { data: questions = [], isLoading } = useFormQuestions(formId);
 
   if (isLoading || questions.length === 0) return null;
@@ -120,7 +121,7 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
 
   // Sort forms by most recently created first
   const sortedForms = [...forms].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
   return (
@@ -138,7 +139,16 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
           },
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            px: 2.5,
+            py: 2,
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
             {t(locale, 'formsFor')} {client.name}
           </Typography>
@@ -211,7 +221,12 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
         </Box>
       </Drawer>
 
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>{t(locale, 'selectTemplate')}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>

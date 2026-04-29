@@ -49,9 +49,7 @@ function AppProvider({ children }: { children: ReactNode }) {
     >
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+        <NotificationProvider>{children}</NotificationProvider>
       </ThemeProvider>
     </AppContext.Provider>
   );

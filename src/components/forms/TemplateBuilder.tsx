@@ -30,6 +30,7 @@ import {
 } from '../../hooks/useForms';
 import { useAppContext } from '../../lib/AppContext';
 import { t } from '../../lib/i18n';
+import type { Locale } from '../../lib/i18n';
 
 interface TemplateBuilderProps {
   open: boolean;
@@ -37,7 +38,7 @@ interface TemplateBuilderProps {
   onClose: () => void;
 }
 
-const getQuestionTypes = (locale: any) => [
+const getQuestionTypes = (locale: Locale) => [
   { value: 'text', label: t(locale, 'shortText') },
   { value: 'textarea', label: t(locale, 'longText') },
   { value: 'number', label: t(locale, 'number') },
@@ -61,7 +62,7 @@ function QuestionEditor({
   onMoveDown: () => void;
   isFirst: boolean;
   isLast: boolean;
-  locale: any;
+  locale: Locale;
 }) {
   const [text, setText] = useState(question.question_text);
   const [type, setType] = useState<QuestionType>(question.question_type);
@@ -203,8 +204,6 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down('md'));
 
-  // Bug #6: Keep internal currentTemplate so we can switch to edit mode after creation
-  // without closing the drawer.
   const [currentTemplate, setCurrentTemplate] = useState<Form | null>(template);
 
   const [title, setTitle] = useState(template?.title ?? '');
@@ -216,19 +215,17 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
   const isNew = !currentTemplate;
 
   const { data: questions = [], isLoading: loadingQs } = useFormQuestions(
-    currentTemplate?.id || '-1',
+    currentTemplate?.id || '-1'
   );
   const createQ = useCreateQuestion();
   const updateQ = useUpdateQuestion();
   const deleteQ = useDeleteQuestion();
 
-  // Bug #2: Prevent concurrent reorder mutations (race condition guard)
   const isReordering = useRef(false);
 
   const handleSaveForm = async () => {
     if (!title.trim()) return;
     if (isNew) {
-      // Bug #6 fix: don't close — switch to edit mode with the newly created template
       const newTemplate = await createTemplate.mutateAsync({ title, description });
       setCurrentTemplate(newTemplate);
     } else {
@@ -261,7 +258,6 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
   };
 
   const handleMoveQuestion = async (q: FormQuestion, direction: -1 | 1) => {
-    // Bug #2 fix: prevent double-firing when user clicks quickly
     if (isReordering.current) return;
     isReordering.current = true;
 
@@ -276,8 +272,6 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
       newOrder[currentIndex] = newOrder[targetIndex];
       newOrder[targetIndex] = temp;
 
-      // Update incrementally to prevent SQLite database locks from parallel writes,
-      // and naturally fix any duplicate positions by strictly using the array index.
       for (let i = 0; i < newOrder.length; i++) {
         const item = newOrder[i];
         if (item.position !== i) {
@@ -320,7 +314,16 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
         },
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          px: 2.5,
+          py: 2,
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
         <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
           {isNew ? t(locale, 'createTemplate') : t(locale, 'editTemplateLabel')}
         </Typography>
@@ -402,7 +405,6 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
           </Box>
         )}
 
-        {/* Bug #6 fix: this alert now only shows briefly before creation resolves */}
         {isNew && (
           <Alert severity="info" sx={{ mt: 2 }}>
             {t(locale, 'saveTemplateFirst')}

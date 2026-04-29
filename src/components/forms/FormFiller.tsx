@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -23,6 +23,7 @@ import type { Form, FormQuestion } from '../../types/form';
 import { useFormQuestions, useUpdateQuestion } from '../../hooks/useForms';
 import { useAppContext } from '../../lib/AppContext';
 import { t } from '../../lib/i18n';
+import type { Locale } from '../../lib/i18n';
 
 const DEBOUNCE_MS = 800;
 
@@ -43,43 +44,41 @@ function isAnswered(q: FormQuestion): boolean {
   }
 }
 
-function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale: any }) {
+function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale: Locale }) {
   const updateQ = useUpdateQuestion();
   const [saving, setSaving] = useState(false);
 
-  // Separate state per answer type — fixes bug #3 (textVal shared with dropdown)
   const [textVal, setTextVal] = useState(question.answer_text || '');
   const [numVal, setNumVal] = useState(question.answer_number?.toString() || '');
   const [whyNot, setWhyNot] = useState(question.answer_why_not || '');
   const [dropdownVal, setDropdownVal] = useState(question.answer_text || '');
 
-  // Track focus to avoid overwriting user's in-progress edits (bug #1)
-  const textFocused = useRef(false);
-  const numFocused = useRef(false);
-  const whyNotFocused = useRef(false);
+  const [textFocused, setTextFocused] = useState(false);
+  const [numFocused, setNumFocused] = useState(false);
+  const [whyNotFocused, setWhyNotFocused] = useState(false);
 
   // Debounce timer refs
   const textDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const numDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const whyNotDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync local state when server data changes and user is not focused (bug #1)
-  useEffect(() => {
-    if (!textFocused.current) setTextVal(question.answer_text || '');
-  }, [question.answer_text]);
+  const [prevText, setPrevText] = useState(question.answer_text);
+  const [prevNum, setPrevNum] = useState(question.answer_number);
+  const [prevWhyNot, setPrevWhyNot] = useState(question.answer_why_not);
 
-  useEffect(() => {
-    if (!numFocused.current)
-      setNumVal(question.answer_number?.toString() || '');
-  }, [question.answer_number]);
-
-  useEffect(() => {
-    if (!whyNotFocused.current) setWhyNot(question.answer_why_not || '');
-  }, [question.answer_why_not]);
-
-  useEffect(() => {
+  if (question.answer_text !== prevText && !textFocused) {
+    setPrevText(question.answer_text);
+    setTextVal(question.answer_text || '');
     setDropdownVal(question.answer_text || '');
-  }, [question.answer_text]);
+  }
+  if (question.answer_number !== prevNum && !numFocused) {
+    setPrevNum(question.answer_number);
+    setNumVal(question.answer_number?.toString() || '');
+  }
+  if (question.answer_why_not !== prevWhyNot && !whyNotFocused) {
+    setPrevWhyNot(question.answer_why_not);
+    setWhyNot(question.answer_why_not || '');
+  }
 
   const saveChanges = async (updates: Partial<FormQuestion>) => {
     setSaving(true);
@@ -133,7 +132,7 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
 
   // Flush on blur (saves immediately if debounce hasn't fired yet)
   const handleBlurText = () => {
-    textFocused.current = false;
+    setTextFocused(false);
     if (textDebounce.current) clearTimeout(textDebounce.current);
     if (textVal !== (question.answer_text || '')) {
       void saveChanges({ answer_text: textVal });
@@ -141,7 +140,7 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
   };
 
   const handleBlurNum = () => {
-    numFocused.current = false;
+    setNumFocused(false);
     if (numDebounce.current) clearTimeout(numDebounce.current);
     const n = parseFloat(numVal);
     if (!isNaN(n) && n !== question.answer_number) {
@@ -150,7 +149,7 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
   };
 
   const handleBlurWhyNot = () => {
-    whyNotFocused.current = false;
+    setWhyNotFocused(false);
     if (whyNotDebounce.current) clearTimeout(whyNotDebounce.current);
     if (whyNot !== (question.answer_why_not || '')) {
       void saveChanges({ answer_why_not: whyNot });
@@ -184,7 +183,9 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
             setTextVal(e.target.value);
             scheduleTextSave(e.target.value);
           }}
-          onFocus={() => { textFocused.current = true; }}
+          onFocus={() => {
+            setTextFocused(true);
+          }}
           onBlur={handleBlurText}
         />
       )}
@@ -200,7 +201,9 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
             setTextVal(e.target.value);
             scheduleTextSave(e.target.value);
           }}
-          onFocus={() => { textFocused.current = true; }}
+          onFocus={() => {
+            setTextFocused(true);
+          }}
           onBlur={handleBlurText}
         />
       )}
@@ -214,13 +217,14 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
             setNumVal(e.target.value);
             scheduleNumSave(e.target.value);
           }}
-          onFocus={() => { numFocused.current = true; }}
+          onFocus={() => {
+            setNumFocused(true);
+          }}
           onBlur={handleBlurNum}
           sx={{ width: 200 }}
         />
       )}
 
-      {/* Bug fix: checkbox no longer shows a redundant "yes" label */}
       {question.question_type === 'checkbox' && (
         <FormControlLabel
           control={
@@ -256,7 +260,9 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
                 setWhyNot(e.target.value);
                 scheduleWhyNotSave(e.target.value);
               }}
-              onFocus={() => { whyNotFocused.current = true; }}
+              onFocus={() => {
+                setWhyNotFocused(true);
+              }}
               onBlur={handleBlurWhyNot}
               sx={{ mt: 1 }}
             />
@@ -264,7 +270,6 @@ function QuestionAnswerer({ question, locale }: { question: FormQuestion; locale
         </Box>
       )}
 
-      {/* Bug fix: dropdownVal is separate from textVal */}
       {question.question_type === 'dropdown' && (
         <Select
           size="small"
@@ -348,7 +353,9 @@ export default function FormFiller({ form, onClose, onEditStructure }: FormFille
       {/* Progress bar */}
       {!isLoading && totalCount > 0 && (
         <Box sx={{ px: 2.5, pt: 1.5, pb: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}
+          >
             <Typography variant="caption" color="text.secondary">
               {t(locale, 'progress')}
             </Typography>

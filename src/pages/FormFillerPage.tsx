@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -31,6 +31,7 @@ import {
 import { useFormQuestions, useUpdateQuestion } from '../hooks/useForms';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
+import type { Locale } from '../lib/i18n';
 import type { FormQuestion } from '../types/form';
 
 const DEBOUNCE_MS = 800;
@@ -54,7 +55,7 @@ function isAnswered(q: FormQuestion): boolean {
 
 // --- Focused Question Component ---
 
-function FocusedQuestion({ question, locale }: { question: FormQuestion; locale: any }) {
+function FocusedQuestion({ question, locale }: { question: FormQuestion; locale: Locale }) {
   const updateQ = useUpdateQuestion();
   const [saving, setSaving] = useState(false);
 
@@ -63,17 +64,17 @@ function FocusedQuestion({ question, locale }: { question: FormQuestion; locale:
   const [whyNot, setWhyNot] = useState(question.answer_why_not || '');
   const [dropdownVal, setDropdownVal] = useState(question.answer_text || '');
 
-  const textFocused = useRef(false);
+  const [textFocused, setTextFocused] = useState(false);
 
   const textDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!textFocused.current) setTextVal(question.answer_text || '');
-  }, [question.answer_text]);
+  const [prevAnswerText, setPrevAnswerText] = useState(question.answer_text);
 
-  useEffect(() => {
+  if (question.answer_text !== prevAnswerText && !textFocused) {
+    setPrevAnswerText(question.answer_text);
+    setTextVal(question.answer_text || '');
     setDropdownVal(question.answer_text || '');
-  }, [question.answer_text]);
+  }
 
   const saveChanges = async (updates: Partial<FormQuestion>) => {
     setSaving(true);
@@ -98,7 +99,9 @@ function FocusedQuestion({ question, locale }: { question: FormQuestion; locale:
   if (question.options) {
     try {
       options = JSON.parse(question.options);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return (
@@ -120,10 +123,13 @@ function FocusedQuestion({ question, locale }: { question: FormQuestion; locale:
             setTextVal(e.target.value);
             scheduleTextSave(e.target.value);
           }}
-          onFocus={() => { textFocused.current = true; }}
-          onBlur={() => { 
-            textFocused.current = false;
-            if (textVal !== (question.answer_text || '')) void saveChanges({ answer_text: textVal });
+          onFocus={() => {
+            setTextFocused(true);
+          }}
+          onBlur={() => {
+            setTextFocused(false);
+            if (textVal !== (question.answer_text || ''))
+              void saveChanges({ answer_text: textVal });
           }}
           placeholder={t(locale, 'typeAnswerHere')}
         />
@@ -140,10 +146,13 @@ function FocusedQuestion({ question, locale }: { question: FormQuestion; locale:
             setTextVal(e.target.value);
             scheduleTextSave(e.target.value);
           }}
-          onFocus={() => { textFocused.current = true; }}
-          onBlur={() => { 
-            textFocused.current = false;
-            if (textVal !== (question.answer_text || '')) void saveChanges({ answer_text: textVal });
+          onFocus={() => {
+            setTextFocused(true);
+          }}
+          onBlur={() => {
+            setTextFocused(false);
+            if (textVal !== (question.answer_text || ''))
+              void saveChanges({ answer_text: textVal });
           }}
           placeholder={t(locale, 'typeAnswerHere')}
         />
@@ -207,9 +216,13 @@ function FocusedQuestion({ question, locale }: { question: FormQuestion; locale:
           onChange={(e) => void saveChanges({ answer_text: e.target.value })}
           displayEmpty
         >
-          <MenuItem value=""><em>{t(locale, 'none')}</em></MenuItem>
+          <MenuItem value="">
+            <em>{t(locale, 'none')}</em>
+          </MenuItem>
           {options.map((opt, i) => (
-            <MenuItem key={i} value={opt}>{opt}</MenuItem>
+            <MenuItem key={i} value={opt}>
+              {opt}
+            </MenuItem>
           ))}
         </Select>
       )}
@@ -223,36 +236,52 @@ export default function FormFillerPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { locale } = useAppContext();
-  
+
   const { data: questions = [], isLoading: loadingQuestions } = useFormQuestions(id || '-1');
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
 
-  const sortedQuestions = useMemo(() => 
-    [...questions].sort((a, b) => a.position - b.position),
-  [questions]);
+  const sortedQuestions = useMemo(
+    () => [...questions].sort((a, b) => a.position - b.position),
+    [questions]
+  );
 
-  useEffect(() => {
-    if (sortedQuestions.length > 0 && !activeQuestionId) {
-      setActiveQuestionId(sortedQuestions[0].id);
-    }
-  }, [sortedQuestions, activeQuestionId]);
+  // Initialize active question when data loads
+  const [prevSortedQuestions, setPrevSortedQuestions] = useState(sortedQuestions);
+  if (sortedQuestions !== prevSortedQuestions && sortedQuestions.length > 0 && !activeQuestionId) {
+    setPrevSortedQuestions(sortedQuestions);
+    setActiveQuestionId(sortedQuestions[0].id);
+  }
 
-  const activeQuestion = useMemo(() => 
-    sortedQuestions.find(q => q.id === activeQuestionId),
-  [sortedQuestions, activeQuestionId]);
+  const activeQuestion = useMemo(
+    () => sortedQuestions.find((q) => q.id === activeQuestionId),
+    [sortedQuestions, activeQuestionId]
+  );
 
   const answeredCount = sortedQuestions.filter(isAnswered).length;
   const totalCount = sortedQuestions.length;
   const progressPct = totalCount > 0 ? (answeredCount / totalCount) * 100 : 0;
 
   if (loadingQuestions) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 8 }}><CircularProgress /></Box>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', bgcolor: 'background.default' }}>
       {/* Sidebar Navigation */}
-      <Paper sx={{ width: 300, display: 'flex', flexDirection: 'column', borderRadius: 0, borderRight: 1, borderColor: 'divider' }}>
+      <Paper
+        sx={{
+          width: 300,
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: 0,
+          borderRight: 1,
+          borderColor: 'divider',
+        }}
+      >
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <IconButton onClick={() => navigate(-1)} sx={{ mb: 1 }}>
             <ArrowBackIcon />
@@ -260,7 +289,11 @@ export default function FormFillerPage() {
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
             {t(locale, 'formProgress')}
           </Typography>
-          <LinearProgress variant="determinate" value={progressPct} sx={{ height: 8, borderRadius: 4, mb: 1 }} />
+          <LinearProgress
+            variant="determinate"
+            value={progressPct}
+            sx={{ height: 8, borderRadius: 4, mb: 1 }}
+          />
           <Typography variant="caption" color="text.secondary">
             {answeredCount} of {totalCount} {t(locale, 'answered')}
           </Typography>
@@ -268,20 +301,24 @@ export default function FormFillerPage() {
         <List sx={{ flexGrow: 1, overflowY: 'auto', py: 0 }}>
           {sortedQuestions.map((q, idx) => (
             <ListItem key={q.id} disablePadding>
-              <ListItemButton 
+              <ListItemButton
                 selected={activeQuestionId === q.id}
                 onClick={() => setActiveQuestionId(q.id)}
                 sx={{ py: 1.5 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
-                  {isAnswered(q) ? <CheckCircleIcon color="success" fontSize="small" /> : <UncheckedIcon fontSize="small" />}
+                  {isAnswered(q) ? (
+                    <CheckCircleIcon color="success" fontSize="small" />
+                  ) : (
+                    <UncheckedIcon fontSize="small" />
+                  )}
                 </ListItemIcon>
-                <ListItemText 
+                <ListItemText
                   primary={`${idx + 1}. ${q.question_text || t(locale, 'untitledQuestion')}`}
-                  primaryTypographyProps={{ 
-                    noWrap: true, 
-                    variant: 'body2', 
-                    fontWeight: activeQuestionId === q.id ? 700 : 400 
+                  primaryTypographyProps={{
+                    noWrap: true,
+                    variant: 'body2',
+                    fontWeight: activeQuestionId === q.id ? 700 : 400,
                   }}
                 />
               </ListItemButton>
@@ -294,11 +331,7 @@ export default function FormFillerPage() {
       <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 6 }}>
         <Box sx={{ maxWidth: 800, mx: 'auto' }}>
           {activeQuestion ? (
-            <FocusedQuestion 
-              key={activeQuestion.id} 
-              question={activeQuestion} 
-              locale={locale} 
-            />
+            <FocusedQuestion key={activeQuestion.id} question={activeQuestion} locale={locale} />
           ) : (
             <Box sx={{ textAlign: 'center', mt: 8 }}>
               <Typography color="text.disabled">{t(locale, 'noQuestionsInForm')}</Typography>
@@ -318,7 +351,9 @@ export default function FormFillerPage() {
             </Button>
             <Button
               variant="contained"
-              disabled={!activeQuestion || sortedQuestions.indexOf(activeQuestion) === totalCount - 1}
+              disabled={
+                !activeQuestion || sortedQuestions.indexOf(activeQuestion) === totalCount - 1
+              }
               onClick={() => {
                 const idx = sortedQuestions.indexOf(activeQuestion!);
                 setActiveQuestionId(sortedQuestions[idx + 1].id);

@@ -1,15 +1,10 @@
-import React, { createContext, useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import type { AlertColor } from '@mui/material';
+import { NotificationContext } from '../lib/NotificationContext';
 import { notificationEventBus } from '../lib/eventBus';
 import type { NotificationEvent } from '../lib/eventBus';
-
-interface NotificationContextType {
-  showNotification: (message: string, type?: AlertColor) => void;
-}
-
-export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -39,7 +39,11 @@ import {
   DragOverlay,
   defaultDropAnimationSideEffects,
   type DragEndEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
+  type DraggableAttributes,
 } from '@dnd-kit/core';
+import { type SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
 import {
   arrayMove,
   SortableContext,
@@ -61,6 +65,7 @@ import {
 } from '../hooks/useForms';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
+import type { Locale } from '../lib/i18n';
 import type { FormQuestion, QuestionType } from '../types/form';
 
 // --- UI Components ---
@@ -71,9 +76,14 @@ interface QuestionRowProps {
   onToggleSelect: (id: string, shiftKey: boolean) => void;
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<FormQuestion>) => void;
-  locale: any;
+  locale: Locale;
   isDragging?: boolean;
-  sortableProps?: any; // listeners, attributes, ref
+  sortableProps?: {
+    attributes: DraggableAttributes;
+    listeners: SyntheticListenerMap | undefined;
+    setNodeRef: (node: HTMLElement | null) => void;
+    style: React.CSSProperties;
+  };
 }
 
 const QuestionRow = ({
@@ -164,7 +174,7 @@ interface SortableRowProps {
   onToggleSelect: (id: string, shiftKey: boolean) => void;
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<FormQuestion>) => void;
-  locale: any;
+  locale: Locale;
 }
 
 function SortableRow(props: SortableRowProps) {
@@ -205,24 +215,25 @@ export default function TemplateEditorPage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const isLocalUpdate = useRef(false);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [isLocalUpdate, setIsLocalUpdate] = useState(false);
 
-  useEffect(() => {
-    if (isLocalUpdate.current) return;
+  const [prevInitialQuestions, setPrevInitialQuestions] = useState(initialQuestions);
+  if (initialQuestions !== prevInitialQuestions && !isLocalUpdate) {
+    setPrevInitialQuestions(initialQuestions);
     if (initialQuestions.length > 0) {
       setQuestions([...initialQuestions].sort((a, b) => a.position - b.position));
     } else {
       setQuestions([]);
     }
-  }, [initialQuestions]);
+  }
 
-  useEffect(() => {
-    if (template) {
-      setTitle(template.title);
-      setDescription(template.description);
-    }
-  }, [template]);
+  const [prevTemplate, setPrevTemplate] = useState(template);
+  if (template !== prevTemplate && template) {
+    setPrevTemplate(template);
+    setTitle(template.title);
+    setDescription(template.description);
+  }
 
   const createTemplate = useCreateTemplate();
   const updateForm = useUpdateForm();
@@ -253,7 +264,7 @@ export default function TemplateEditorPage() {
       }
       setSelectedIds(newSelected);
     },
-    [questions, selectedIds, lastSelectedIndex],
+    [questions, selectedIds, lastSelectedIndex]
   );
 
   const handleSelectAll = (checked: boolean) => {
@@ -270,7 +281,10 @@ export default function TemplateEditorPage() {
 
   const handleAddQuestion = async () => {
     if (!id) {
-      const newT = await createTemplate.mutateAsync({ title: title || 'New Template', description });
+      const newT = await createTemplate.mutateAsync({
+        title: title || 'New Template',
+        description,
+      });
       navigate(`/templates/edit/${newT.id}`, { replace: true });
       return;
     }
@@ -323,10 +337,10 @@ export default function TemplateEditorPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id);
   };
 
@@ -335,7 +349,7 @@ export default function TemplateEditorPage() {
     setActiveId(null);
 
     if (over && active.id !== over.id) {
-      isLocalUpdate.current = true;
+      setIsLocalUpdate(true);
       const oldIndex = questions.findIndex((q) => q.id === active.id);
       const newIndex = questions.findIndex((q) => q.id === over.id);
       const newQuestions = arrayMove(questions, oldIndex, newIndex);
@@ -356,16 +370,19 @@ export default function TemplateEditorPage() {
         } finally {
           // Allow sync again after a short delay to let refetches settle
           setTimeout(() => {
-            isLocalUpdate.current = false;
+            setIsLocalUpdate(false);
           }, 500);
         }
       } else {
-        isLocalUpdate.current = false;
+        setIsLocalUpdate(false);
       }
     }
   };
 
-  const activeQuestion = useMemo(() => questions.find((q) => q.id === activeId), [questions, activeId]);
+  const activeQuestion = useMemo(
+    () => questions.find((q) => q.id === activeId),
+    [questions, activeId]
+  );
 
   if (!isNew && !template && !loadingQuestions) {
     return (
@@ -378,10 +395,22 @@ export default function TemplateEditorPage() {
 
   return (
     <Box
-      sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        bgcolor: 'background.default',
+      }}
     >
       <Paper
-        sx={{ px: 3, py: 2, borderBottom: 1, borderColor: 'divider', borderRadius: 0, zIndex: 1100 }}
+        sx={{
+          px: 3,
+          py: 2,
+          borderBottom: 1,
+          borderColor: 'divider',
+          borderRadius: 0,
+          zIndex: 1100,
+        }}
       >
         <Stack direction="row" alignItems="center" spacing={2}>
           <IconButton onClick={() => navigate('/templates')}>
@@ -489,7 +518,9 @@ export default function TemplateEditorPage() {
                       <TableCell padding="checkbox">
                         <Checkbox
                           size="small"
-                          indeterminate={selectedIds.size > 0 && selectedIds.size < questions.length}
+                          indeterminate={
+                            selectedIds.size > 0 && selectedIds.size < questions.length
+                          }
                           checked={questions.length > 0 && selectedIds.size === questions.length}
                           onChange={(e) => handleSelectAll(e.target.checked)}
                         />
@@ -535,7 +566,7 @@ export default function TemplateEditorPage() {
                     <TableBody>
                       <QuestionRow
                         question={activeQuestion!}
-                        isSelected={selectedIds.has(activeId)}
+                        isSelected={selectedIds.has(activeId as string)}
                         onToggleSelect={() => {}}
                         onDelete={() => {}}
                         onUpdate={() => {}}

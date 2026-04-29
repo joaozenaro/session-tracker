@@ -8,7 +8,7 @@ export interface Client {
   color: string;
 }
 
-export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'plan' | 'medications' | 'color'>;
+export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'plan' | 'medications'>;
 export type ClientUpdate = Partial<Omit<Client, 'id' | 'created_at'>>;
 
 /** Map of client_id → session count, returned by `get_session_counts`. */
