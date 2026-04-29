@@ -138,17 +138,17 @@ export default function WeekView({
                   sx={{
                     p: 1,
                     mb: 0.75,
-                    bgcolor: 'primary.main',
+                    bgcolor: s.client?.color || 'primary.main',
                     borderRadius: 1,
                     cursor: 'pointer',
-                    '&:hover': { bgcolor: 'primary.dark' },
+                    '&:hover': { filter: 'brightness(0.95)' },
                   }}
                 >
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'primary.contrastText',
-                      fontWeight: 600,
+                      color: 'text.primary',
+                      fontWeight: 700,
                       display: 'block',
                       fontSize: '0.72rem',
                     }}
@@ -158,7 +158,7 @@ export default function WeekView({
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'primary.contrastText',
+                      color: 'text.primary',
                       display: 'block',
                       fontSize: '0.75rem',
                       fontWeight: 500,
@@ -170,7 +170,7 @@ export default function WeekView({
                     <Typography
                       variant="caption"
                       sx={{
-                        color: 'rgba(255,255,255,0.75)',
+                        color: 'text.secondary',
                         display: 'block',
                         fontSize: '0.68rem',
                         mt: 0.25,

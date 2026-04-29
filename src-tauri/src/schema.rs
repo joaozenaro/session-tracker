@@ -8,6 +8,7 @@ diesel::table! {
         created_at -> Text,
         plan -> Text,
         medications -> Text,
+        color -> Text,
     }
 }
 

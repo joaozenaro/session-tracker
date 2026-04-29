@@ -55,13 +55,19 @@ pub async fn get_session_counts(pool: State<'_, DbPool>) -> CmdResult<HashMap<St
 pub async fn create_client(pool: State<'_, DbPool>, payload: ClientInsert) -> CmdResult<Client> {
     let pool = pool.inner().clone();
     blocking!(pool, |conn: &mut SqliteConnection| {
+        let id = Uuid::new_v4();
+        // Generate a random hue (0-359)
+        let hue = (id.as_bytes()[0] as u32 * 360) / 256;
+        let color = format!("hsl({}, 80%, 70%)", hue);
+        
         let new = NewClient {
-            id:          Uuid::new_v4().to_string(),
+            id:          id.to_string(),
             name:        payload.name,
             telephone:   payload.telephone,
             created_at:  Utc::now().to_rfc3339(),
             plan:        String::new(),
             medications: String::new(),
+            color,
         };
         diesel::insert_into(clients::table)
             .values(&new)

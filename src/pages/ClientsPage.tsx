@@ -14,6 +14,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Alert from '@mui/material/Alert';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Slider from '@mui/material/Slider';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
@@ -67,6 +68,16 @@ function ClientForm({ open, client, onClose, locale }: ClientFormProps) {
   const [name, setName] = useState(client?.name ?? '');
   const [telephone, setTelephone] = useState(client?.telephone ?? '');
 
+  const parseHue = (colorStr?: string) => {
+    if (!colorStr) return Math.floor(Math.random() * 360);
+    const match = colorStr.match(/hsl\((\d+),/);
+    return match ? parseInt(match[1]) : 200; // Default if not HSL
+  };
+
+  const [hue, setHue] = useState(() => parseHue(client?.color));
+
+  const color = `hsl(${hue}, 80%, 70%)`;
+
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
 
@@ -74,7 +85,11 @@ function ClientForm({ open, client, onClose, locale }: ClientFormProps) {
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    const payload: ClientInsert = { name: name.trim(), telephone: telephone.trim() };
+    const payload: ClientInsert | any = {
+      name: name.trim(),
+      telephone: telephone.trim(),
+      color,
+    };
     if (client) {
       await updateClient.mutateAsync({ id: client.id, payload });
     } else {
@@ -141,6 +156,54 @@ function ClientForm({ open, client, onClose, locale }: ClientFormProps) {
           fullWidth
           size="small"
         />
+
+        <Box sx={{ mt: 1 }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 2 }}
+          >
+            {t(locale, 'color')}
+            <Box
+              sx={{
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                bgcolor: color,
+                border: 1,
+                borderColor: 'divider',
+              }}
+            />
+          </Typography>
+          <Slider
+            value={hue}
+            onChange={(_, v) => setHue(v as number)}
+            min={0}
+            max={360}
+            sx={{
+              height: 10,
+              '& .MuiSlider-track': { display: 'none' },
+              '& .MuiSlider-thumb': {
+                width: 24,
+                height: 24,
+                bgcolor: color,
+                border: 3,
+                borderColor: 'white',
+                boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+                '&:hover, &.Mui-active, &.Mui-focusVisible': {
+                  boxShadow: '0 0 15px rgba(0,0,0,0.4)',
+                },
+              },
+              '& .MuiSlider-rail': {
+                opacity: 1,
+                height: 10,
+                borderRadius: 5,
+                background:
+                  'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
+              },
+            }}
+          />
+        </Box>
       </Box>
       <Box sx={{ px: 2.5, py: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1.5 }}>
         <Button variant="outlined" onClick={onClose} fullWidth disabled={saving}>
@@ -217,6 +280,7 @@ function ClientMenu({ client, onEdit, onDelete, locale }: ClientMenuProps) {
 }
 
 export default function ClientsPage() {
+  const theme = useTheme();
   const { locale } = useAppContext();
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -226,6 +290,7 @@ export default function ClientsPage() {
   const [textEditorOpen, setTextEditorOpen] = useState(false);
   const [textEditorType, setTextEditorType] = useState<'plan' | 'medications'>('plan');
   const [textEditorClient, setTextEditorClient] = useState<Client | null>(null);
+  const [addKey, setAddKey] = useState(0);
 
   const { data: clients = [], isLoading, error } = useClients();
   const { data: sessionCounts = {} } = useSessionCounts();
@@ -243,6 +308,7 @@ export default function ClientsPage() {
 
   const handleAdd = () => {
     setEditingClient(null);
+    setAddKey((prev) => prev + 1);
     setFormOpen(true);
   };
 
@@ -337,7 +403,8 @@ export default function ClientsPage() {
                 <Box sx={{ p: 2, display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                   <Avatar
                     sx={{
-                      bgcolor: 'primary.main',
+                      bgcolor: client.color || 'primary.main',
+                      color: 'text.primary',
                       width: 48,
                       height: 48,
                       fontSize: '1rem',
@@ -387,7 +454,7 @@ export default function ClientsPage() {
                     mt: 'auto',
                     px: 1.5,
                     py: 1,
-                    bgcolor: 'grey.50',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'grey.50',
                     borderTop: 1,
                     borderColor: 'divider',
                     display: 'flex',
@@ -429,7 +496,7 @@ export default function ClientsPage() {
       </Box>
 
       <ClientForm
-        key={editingClient?.id ?? 'new'}
+        key={editingClient ? editingClient.id : `new-${addKey}`}
         open={formOpen}
         client={editingClient}
         onClose={() => setFormOpen(false)}

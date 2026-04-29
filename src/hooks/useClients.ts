@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientService } from '../services/clientService';
 import type { ClientInsert, ClientUpdate } from '../types/client';
+import { sessionKeys } from './useSessions';
 
 export const clientKeys = {
   all: ['clients'] as const,
@@ -42,6 +43,7 @@ export function useUpdateClient() {
       clientService.updateClient(id, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: clientKeys.all });
+      void qc.invalidateQueries({ queryKey: sessionKeys.all });
     },
   });
 }
@@ -53,6 +55,7 @@ export function useDeleteClient() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: clientKeys.all });
       void qc.invalidateQueries({ queryKey: clientKeys.counts });
+      void qc.invalidateQueries({ queryKey: sessionKeys.all });
     },
   });
 }

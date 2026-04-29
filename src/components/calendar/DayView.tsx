@@ -70,8 +70,8 @@ export default function DayView({ sessions, onSessionClick }: DayViewProps) {
             </Box>
             <Avatar
               sx={{
-                bgcolor: 'primary.light',
-                color: 'primary.contrastText',
+                bgcolor: session.client?.color || 'primary.light',
+                color: 'text.primary',
                 width: 36,
                 height: 36,
                 fontSize: '0.8rem',

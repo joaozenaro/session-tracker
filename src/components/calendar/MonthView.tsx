@@ -138,17 +138,17 @@ export default function MonthView({
                     px: 0.75,
                     py: 0.25,
                     mb: 0.25,
-                    bgcolor: 'primary.main',
+                    bgcolor: s.client?.color || 'primary.main',
                     borderRadius: 0.75,
                     cursor: 'pointer',
-                    '&:hover': { bgcolor: 'primary.dark' },
+                    '&:hover': { filter: 'brightness(0.95)' },
                     overflow: 'hidden',
                   }}
                 >
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'primary.contrastText',
+                      color: 'text.primary',
                       fontSize: '0.68rem',
                       display: 'block',
                       whiteSpace: 'nowrap',

@@ -125,6 +125,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     noMedications: 'No medications registered',
     savePlan: 'Save Plan',
     saveMedications: 'Save Medications',
+    color: 'Color',
   },
   pt: {
     calendar: 'Calendário',
@@ -250,6 +251,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     noMedications: 'Nenhuma medicação registrada',
     savePlan: 'Salvar Plano',
     saveMedications: 'Salvar Medicações',
+    color: 'Cor',
   },
 };
 

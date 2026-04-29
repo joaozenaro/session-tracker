@@ -13,6 +13,7 @@ pub struct Client {
     pub created_at:  String,
     pub plan:        String,
     pub medications: String,
+    pub color:       String,
 }
 
 // ── Insertable row ────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ pub struct NewClient {
     pub created_at:  String,
     pub plan:        String,
     pub medications: String,
+    pub color:       String,
 }
 
 // ── JS payloads ───────────────────────────────────────────────────────────────
@@ -46,4 +48,5 @@ pub struct ClientUpdate {
     pub telephone:   Option<String>,
     pub plan:        Option<String>,
     pub medications: Option<String>,
+    pub color:       Option<String>,
 }

@@ -5,9 +5,10 @@ export interface Client {
   created_at: string;
   plan: string;
   medications: string;
+  color: string;
 }
 
-export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'plan' | 'medications'>;
+export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'plan' | 'medications' | 'color'>;
 export type ClientUpdate = Partial<Omit<Client, 'id' | 'created_at'>>;
 
 /** Map of client_id → session count, returned by `get_session_counts`. */
