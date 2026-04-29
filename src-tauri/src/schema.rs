@@ -6,6 +6,8 @@ diesel::table! {
         name -> Text,
         telephone -> Text,
         created_at -> Text,
+        plan -> Text,
+        medications -> Text,
     }
 }
 

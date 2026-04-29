@@ -7,10 +7,12 @@ use crate::schema::clients;
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = clients)]
 pub struct Client {
-    pub id:         String,
-    pub name:       String,
-    pub telephone:  String,
-    pub created_at: String,
+    pub id:          String,
+    pub name:        String,
+    pub telephone:   String,
+    pub created_at:  String,
+    pub plan:        String,
+    pub medications: String,
 }
 
 // ── Insertable row ────────────────────────────────────────────────────────────
@@ -18,10 +20,12 @@ pub struct Client {
 #[derive(Debug, Insertable)]
 #[diesel(table_name = clients)]
 pub struct NewClient {
-    pub id:         String,
-    pub name:       String,
-    pub telephone:  String,
-    pub created_at: String,
+    pub id:          String,
+    pub name:        String,
+    pub telephone:   String,
+    pub created_at:  String,
+    pub plan:        String,
+    pub medications: String,
 }
 
 // ── JS payloads ───────────────────────────────────────────────────────────────
@@ -38,6 +42,8 @@ pub struct ClientInsert {
 #[derive(Debug, Deserialize, AsChangeset)]
 #[diesel(table_name = clients)]
 pub struct ClientUpdate {
-    pub name:      Option<String>,
-    pub telephone: Option<String>,
+    pub name:        Option<String>,
+    pub telephone:   Option<String>,
+    pub plan:        Option<String>,
+    pub medications: Option<String>,
 }

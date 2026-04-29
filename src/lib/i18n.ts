@@ -120,6 +120,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     previous: 'Previous',
     next: 'Next',
     deleteSelected: 'Delete Selected',
+    plan: 'Plan',
+    medications: 'Medications',
+    noMedications: 'No medications registered',
+    savePlan: 'Save Plan',
+    saveMedications: 'Save Medications',
   },
   pt: {
     calendar: 'Calendário',
@@ -240,6 +245,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     previous: 'Anterior',
     next: 'Próximo',
     deleteSelected: 'Excluir Selecionados',
+    plan: 'Plano',
+    medications: 'Medicações',
+    noMedications: 'Nenhuma medicação registrada',
+    savePlan: 'Salvar Plano',
+    saveMedications: 'Salvar Medicações',
   },
 };
 

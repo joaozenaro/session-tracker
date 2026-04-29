@@ -12,6 +12,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import Alert from '@mui/material/Alert';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
@@ -21,6 +23,10 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import CloseIcon from '@mui/icons-material/Close';
 import PersonIcon from '@mui/icons-material/Person';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
+import MedicationIcon from '@mui/icons-material/Medication';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import Badge from '@mui/material/Badge';
 import { MuiTelInput } from 'mui-tel-input';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
@@ -34,6 +40,7 @@ import {
   useDeleteClient,
 } from '../hooks/useClients';
 import ClientFormsDrawer from '../components/forms/ClientFormsDrawer';
+import ClientTextEditorDrawer from '../components/ClientTextEditorDrawer';
 
 function getInitials(name: string) {
   return (
@@ -159,6 +166,56 @@ function ClientForm({ open, client, onClose, locale }: ClientFormProps) {
   );
 }
 
+interface ClientMenuProps {
+  client: Client;
+  onEdit: (client: Client) => void;
+  onDelete: (id: string) => void;
+  locale: Locale;
+}
+
+function ClientMenu({ client, onEdit, onDelete, locale }: ClientMenuProps) {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  return (
+    <>
+      <IconButton size="small" onClick={handleClick}>
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+      <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+        <MenuItem
+          onClick={() => {
+            onEdit(client);
+            handleClose();
+          }}
+          sx={{ fontSize: '0.85rem' }}
+        >
+          <EditIcon fontSize="inherit" sx={{ mr: 1, color: 'text.secondary' }} />
+          {t(locale, 'edit')}
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            void onDelete(client.id);
+            handleClose();
+          }}
+          sx={{ fontSize: '0.85rem', color: 'error.main' }}
+        >
+          <DeleteIcon fontSize="inherit" sx={{ mr: 1, color: 'inherit' }} />
+          {t(locale, 'delete')}
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
+
 export default function ClientsPage() {
   const { locale } = useAppContext();
   const [search, setSearch] = useState('');
@@ -166,6 +223,9 @@ export default function ClientsPage() {
   const [formsDrawerOpen, setFormsDrawerOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [formsClient, setFormsClient] = useState<Client | null>(null);
+  const [textEditorOpen, setTextEditorOpen] = useState(false);
+  const [textEditorType, setTextEditorType] = useState<'plan' | 'medications'>('plan');
+  const [textEditorClient, setTextEditorClient] = useState<Client | null>(null);
 
   const { data: clients = [], isLoading, error } = useClients();
   const { data: sessionCounts = {} } = useSessionCounts();
@@ -189,6 +249,12 @@ export default function ClientsPage() {
   const handleOpenForms = (client: Client) => {
     setFormsClient(client);
     setFormsDrawerOpen(true);
+  };
+
+  const handleOpenTextEditor = (client: Client, type: 'plan' | 'medications') => {
+    setTextEditorClient(client);
+    setTextEditorType(type);
+    setTextEditorOpen(true);
   };
 
   const filtered = clients.filter(
@@ -253,7 +319,7 @@ export default function ClientsPage() {
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-              gap: 2,
+              gap: 2.5,
             }}
           >
             {filtered.map((client) => (
@@ -261,67 +327,98 @@ export default function ClientsPage() {
                 key={client.id}
                 variant="outlined"
                 sx={{
-                  p: 2.5,
-                  borderRadius: 2,
+                  borderRadius: 3,
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 2,
-                  transition: 'box-shadow 150ms',
-                  '&:hover': { boxShadow: 2 },
+                  flexDirection: 'column',
+                  overflow: 'hidden',
                 }}
               >
-                <Avatar
+                {/* Header Section */}
+                <Box sx={{ p: 2, display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'primary.main',
+                      width: 48,
+                      height: 48,
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    {getInitials(client.name)}
+                  </Avatar>
+                  <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontWeight: 700, fontSize: '1rem', lineHeight: 1.2, mb: 0.5 }}
+                      noWrap
+                    >
+                      {client.name}
+                    </Typography>
+                    {client.telephone && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <PhoneIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {client.telephone}
+                        </Typography>
+                      </Box>
+                    )}
+                    <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+                      <Chip
+                        label={`${sessionCounts[client.id] ?? 0} ${t(locale, 'sessions').toLowerCase()}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.65rem', height: 18, borderStyle: 'dashed' }}
+                      />
+                    </Box>
+                  </Box>
+                  <ClientMenu
+                    client={client}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    locale={locale}
+                  />
+                </Box>
+
+                {/* Footer Toolbar */}
+                <Box
                   sx={{
-                    bgcolor: 'primary.main',
-                    width: 44,
-                    height: 44,
-                    fontSize: '0.9rem',
-                    fontWeight: 700,
-                    flexShrink: 0,
+                    mt: 'auto',
+                    px: 1.5,
+                    py: 1,
+                    bgcolor: 'grey.50',
+                    borderTop: 1,
+                    borderColor: 'divider',
+                    display: 'flex',
+                    justifyContent: 'space-around',
+                    alignItems: 'center',
                   }}
                 >
-                  {getInitials(client.name)}
-                </Avatar>
-                <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                    {client.name}
-                  </Typography>
-                  {client.telephone && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                      <PhoneIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                      <Typography variant="caption" color="text.secondary">
-                        {client.telephone}
-                      </Typography>
-                    </Box>
-                  )}
-                  <Box sx={{ mt: 1 }}>
-                    <Chip
-                      label={`${sessionCounts[client.id] ?? 0} ${t(locale, 'sessions').toLowerCase()}`}
-                      size="small"
-                      variant="outlined"
-                      sx={{ fontSize: '0.7rem', height: 20 }}
-                    />
-                  </Box>
-                </Box>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  <Tooltip title={t(locale, 'edit')}>
-                    <IconButton size="small" onClick={() => handleEdit(client)}>
-                      <EditIcon fontSize="small" />
+                  <Tooltip title={t(locale, 'plan')}>
+                    <IconButton size="small" onClick={() => handleOpenTextEditor(client, 'plan')}>
+                      <HistoryEduIcon fontSize="small" color="action" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title={t(locale, 'forms')}>
-                    <IconButton size="small" onClick={() => handleOpenForms(client)}>
-                      <AssignmentIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={t(locale, 'delete')}>
+                  <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto' }} />
+                  <Tooltip title={t(locale, 'medications')}>
                     <IconButton
                       size="small"
-                      color="error"
-                      onClick={() => void handleDelete(client.id)}
+                      onClick={() => handleOpenTextEditor(client, 'medications')}
                     >
-                      <DeleteIcon fontSize="small" />
+                      <Badge
+                        variant="dot"
+                        color="warning"
+                        invisible={!!client.medications && client.medications !== '<p></p>'}
+                      >
+                        <MedicationIcon fontSize="small" color="action" />
+                      </Badge>
+                    </IconButton>
+                  </Tooltip>
+                  <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto' }} />
+                  <Tooltip title={t(locale, 'forms')}>
+                    <IconButton size="small" onClick={() => handleOpenForms(client)}>
+                      <AssignmentIcon fontSize="small" color="action" />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -343,6 +440,13 @@ export default function ClientsPage() {
         open={formsDrawerOpen}
         client={formsClient}
         onClose={() => setFormsDrawerOpen(false)}
+      />
+
+      <ClientTextEditorDrawer
+        open={textEditorOpen}
+        client={textEditorClient}
+        type={textEditorType}
+        onClose={() => setTextEditorOpen(false)}
       />
     </Box>
   );

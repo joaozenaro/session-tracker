@@ -56,10 +56,12 @@ pub async fn create_client(pool: State<'_, DbPool>, payload: ClientInsert) -> Cm
     let pool = pool.inner().clone();
     blocking!(pool, |conn: &mut SqliteConnection| {
         let new = NewClient {
-            id:         Uuid::new_v4().to_string(),
-            name:       payload.name,
-            telephone:  payload.telephone,
-            created_at: Utc::now().to_rfc3339(),
+            id:          Uuid::new_v4().to_string(),
+            name:        payload.name,
+            telephone:   payload.telephone,
+            created_at:  Utc::now().to_rfc3339(),
+            plan:        String::new(),
+            medications: String::new(),
         };
         diesel::insert_into(clients::table)
             .values(&new)
