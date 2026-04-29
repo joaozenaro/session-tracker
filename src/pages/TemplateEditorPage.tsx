@@ -42,8 +42,8 @@ import {
   type DragStartEvent,
   type UniqueIdentifier,
   type DraggableAttributes,
+  type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
-import { type SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
 import {
   arrayMove,
   SortableContext,
@@ -80,7 +80,7 @@ interface QuestionRowProps {
   isDragging?: boolean;
   sortableProps?: {
     attributes: DraggableAttributes;
-    listeners: SyntheticListenerMap | undefined;
+    listeners: DraggableSyntheticListeners;
     setNodeRef: (node: HTMLElement | null) => void;
     style: React.CSSProperties;
   };
