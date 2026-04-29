@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -105,6 +105,14 @@ function QuestionEditor({
     setIsEditing(false);
   };
 
+  // Improvement: Enter key in the text field triggers save
+  const handleTextKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void handleSave();
+    }
+  };
+
   return (
     <Paper sx={{ p: 2, mb: 2 }} variant="outlined">
       <Box sx={{ display: 'flex', alignItems: 'center', mb: isEditing ? 2 : 0 }}>
@@ -123,7 +131,9 @@ function QuestionEditor({
               fullWidth
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleTextKeyDown}
               placeholder={t(locale, 'questionTextPlaceholder')}
+              autoFocus
             />
           ) : (
             <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -168,14 +178,20 @@ function QuestionEditor({
             />
           )}
 
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => void handleSave()}
-            disabled={updateQ.isPending}
-          >
-            {updateQ.isPending ? t(locale, 'saving') : t(locale, 'saveQuestion')}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => void handleSave()}
+              disabled={updateQ.isPending}
+              disableElevation
+            >
+              {updateQ.isPending ? t(locale, 'saving') : t(locale, 'saveQuestion')}
+            </Button>
+            <Button size="small" onClick={() => setIsEditing(false)}>
+              {t(locale, 'cancel')}
+            </Button>
+          </Box>
         </Box>
       )}
     </Paper>
@@ -187,34 +203,44 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down('md'));
 
+  // Bug #6: Keep internal currentTemplate so we can switch to edit mode after creation
+  // without closing the drawer.
+  const [currentTemplate, setCurrentTemplate] = useState<Form | null>(template);
+
   const [title, setTitle] = useState(template?.title ?? '');
   const [description, setDescription] = useState(template?.description ?? '');
 
   const createTemplate = useCreateTemplate();
   const updateForm = useUpdateForm();
 
-  const { data: questions = [], isLoading: loadingQs } = useFormQuestions(template?.id || '-1');
+  const isNew = !currentTemplate;
+
+  const { data: questions = [], isLoading: loadingQs } = useFormQuestions(
+    currentTemplate?.id || '-1',
+  );
   const createQ = useCreateQuestion();
   const updateQ = useUpdateQuestion();
   const deleteQ = useDeleteQuestion();
 
-  const isNew = !template;
+  // Bug #2: Prevent concurrent reorder mutations (race condition guard)
+  const isReordering = useRef(false);
 
   const handleSaveForm = async () => {
     if (!title.trim()) return;
     if (isNew) {
-      await createTemplate.mutateAsync({ title, description });
-      onClose(); // Alternatively, we could keep it open to add questions, but for simplicity we close and they can edit immediately
+      // Bug #6 fix: don't close — switch to edit mode with the newly created template
+      const newTemplate = await createTemplate.mutateAsync({ title, description });
+      setCurrentTemplate(newTemplate);
     } else {
-      await updateForm.mutateAsync({ id: template.id, payload: { title, description } });
+      await updateForm.mutateAsync({ id: currentTemplate.id, payload: { title, description } });
       onClose();
     }
   };
 
   const handleAddQuestion = async () => {
-    if (!template) return;
+    if (!currentTemplate) return;
     await createQ.mutateAsync({
-      formId: template.id,
+      formId: currentTemplate.id,
       payload: {
         question_text: t(locale, 'untitledQuestion'),
         question_type: 'text',
@@ -231,43 +257,49 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
 
   const handleDeleteQuestion = async (q: FormQuestion) => {
     if (!confirm(t(locale, 'deleteQuestionConfirm'))) return;
-    await deleteQ.mutateAsync({ formId: template!.id, id: q.id });
+    await deleteQ.mutateAsync({ formId: currentTemplate!.id, id: q.id });
   };
 
   const handleMoveQuestion = async (q: FormQuestion, direction: -1 | 1) => {
-    // We must use the sorted order to figure out who is above/below
-    const sorted = [...questions].sort((a, b) => a.position - b.position);
-    const currentIndex = sorted.findIndex((x) => x.id === q.id);
-    const targetIndex = currentIndex + direction;
-    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+    // Bug #2 fix: prevent double-firing when user clicks quickly
+    if (isReordering.current) return;
+    isReordering.current = true;
 
-    // Swap elements in array
-    const newOrder = [...sorted];
-    const temp = newOrder[currentIndex];
-    newOrder[currentIndex] = newOrder[targetIndex];
-    newOrder[targetIndex] = temp;
+    try {
+      const sorted = [...questions].sort((a, b) => a.position - b.position);
+      const currentIndex = sorted.findIndex((x) => x.id === q.id);
+      const targetIndex = currentIndex + direction;
+      if (targetIndex < 0 || targetIndex >= sorted.length) return;
 
-    // Update incrementally to prevent SQLite database locks from parallel writes,
-    // and naturally fix any duplicate positions by strictly using the array index.
-    for (let i = 0; i < newOrder.length; i++) {
-      const item = newOrder[i];
-      if (item.position !== i) {
-        await updateQ.mutateAsync({
-          formId: template!.id,
-          id: item.id,
-          payload: {
-            question_text: item.question_text,
-            question_type: item.question_type,
-            options: item.options,
-            position: i,
-            answer_text: item.answer_text,
-            answer_yes_no: item.answer_yes_no,
-            answer_why_not: item.answer_why_not,
-            answer_checkbox: item.answer_checkbox,
-            answer_number: item.answer_number,
-          },
-        });
+      const newOrder = [...sorted];
+      const temp = newOrder[currentIndex];
+      newOrder[currentIndex] = newOrder[targetIndex];
+      newOrder[targetIndex] = temp;
+
+      // Update incrementally to prevent SQLite database locks from parallel writes,
+      // and naturally fix any duplicate positions by strictly using the array index.
+      for (let i = 0; i < newOrder.length; i++) {
+        const item = newOrder[i];
+        if (item.position !== i) {
+          await updateQ.mutateAsync({
+            formId: currentTemplate!.id,
+            id: item.id,
+            payload: {
+              question_text: item.question_text,
+              question_type: item.question_type,
+              options: item.options,
+              position: i,
+              answer_text: item.answer_text,
+              answer_yes_no: item.answer_yes_no,
+              answer_why_not: item.answer_why_not,
+              answer_checkbox: item.answer_checkbox,
+              answer_number: item.answer_number,
+            },
+          });
+        }
       }
+    } finally {
+      isReordering.current = false;
     }
   };
 
@@ -330,7 +362,9 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
             disabled={!title.trim() || createTemplate.isPending || updateForm.isPending}
             disableElevation
           >
-            {createTemplate.isPending || updateForm.isPending ? t(locale, 'saving') : t(locale, 'saveTemplateDetails')}
+            {createTemplate.isPending || updateForm.isPending
+              ? t(locale, 'saving')
+              : t(locale, 'saveTemplateDetails')}
           </Button>
         </Box>
 
@@ -367,6 +401,8 @@ export default function TemplateBuilder({ open, template, onClose }: TemplateBui
             )}
           </Box>
         )}
+
+        {/* Bug #6 fix: this alert now only shows briefly before creation resolves */}
         {isNew && (
           <Alert severity="info" sx={{ mt: 2 }}>
             {t(locale, 'saveTemplateFirst')}

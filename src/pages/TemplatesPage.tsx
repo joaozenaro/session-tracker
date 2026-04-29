@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -13,26 +13,21 @@ import IconButton from '@mui/material/IconButton';
 
 import type { Form } from '../types/form';
 import { useTemplates, useDeleteForm } from '../hooks/useForms';
-import TemplateBuilder from '../components/forms/TemplateBuilder';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
 
 export default function TemplatesPage() {
   const { locale } = useAppContext();
+  const navigate = useNavigate();
   const { data: templates = [], isLoading, error } = useTemplates();
   const deleteForm = useDeleteForm();
 
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<Form | null>(null);
-
   const handleAdd = () => {
-    setEditingTemplate(null);
-    setBuilderOpen(true);
+    navigate('/templates/new');
   };
 
   const handleEdit = (template: Form) => {
-    setEditingTemplate(template);
-    setBuilderOpen(true);
+    navigate(`/templates/edit/${template.id}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -82,7 +77,19 @@ export default function TemplatesPage() {
         {templates.length === 0 && !isLoading ? (
           <Box sx={{ textAlign: 'center', py: 8, color: 'text.disabled' }}>
             <AssignmentIcon sx={{ fontSize: 48, mb: 1, opacity: 0.3 }} />
-            <Typography variant="body1">{t(locale, 'noTemplatesFound')}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {t(locale, 'noTemplatesFound')}
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<AddIcon />}
+              onClick={handleAdd}
+              disableElevation
+              sx={{ textTransform: 'none' }}
+            >
+              {t(locale, 'createTemplate')}
+            </Button>
           </Box>
         ) : (
           <Box
@@ -130,13 +137,6 @@ export default function TemplatesPage() {
           </Box>
         )}
       </Box>
-
-      <TemplateBuilder
-        key={editingTemplate?.id ?? 'new'}
-        open={builderOpen}
-        template={editingTemplate}
-        onClose={() => setBuilderOpen(false)}
-      />
     </Box>
   );
 }

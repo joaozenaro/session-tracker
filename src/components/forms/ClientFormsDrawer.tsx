@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -12,24 +13,66 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 import type { Client } from '../../types/client';
-import type { Form } from '../../types/form';
+import type { FormQuestion } from '../../types/form';
 import {
   useTemplates,
   useClientForms,
   useCopyTemplateToClient,
   useDeleteForm,
+  useFormQuestions,
 } from '../../hooks/useForms';
-import FormFiller from './FormFiller';
-import TemplateBuilder from './TemplateBuilder';
 import { useAppContext } from '../../lib/AppContext';
 import { t } from '../../lib/i18n';
+
+// Improvement: Per-form completion badge using cached question data
+function FormProgressBadge({ formId, locale }: { formId: string; locale: any }) {
+  const { data: questions = [], isLoading } = useFormQuestions(formId);
+
+  if (isLoading || questions.length === 0) return null;
+
+  const answered = questions.filter((q: FormQuestion) => {
+    switch (q.question_type) {
+      case 'text':
+      case 'textarea':
+      case 'dropdown':
+        return q.answer_text !== null && q.answer_text !== '';
+      case 'number':
+        return q.answer_number !== null;
+      case 'yes_no':
+        return q.answer_yes_no !== null;
+      case 'checkbox':
+        return q.answer_checkbox !== null;
+      default:
+        return false;
+    }
+  }).length;
+
+  const total = questions.length;
+  const complete = answered === total;
+
+  return (
+    <Tooltip title={complete ? t(locale, 'allAnswered') : `${answered} / ${total}`}>
+      <Chip
+        icon={complete ? <CheckCircleOutlineIcon /> : undefined}
+        label={`${answered} / ${total}`}
+        size="small"
+        color={complete ? 'success' : answered > 0 ? 'primary' : 'default'}
+        variant={complete ? 'filled' : 'outlined'}
+        sx={{ fontSize: '0.7rem', height: 22 }}
+      />
+    </Tooltip>
+  );
+}
 
 interface ClientFormsDrawerProps {
   open: boolean;
@@ -40,6 +83,7 @@ interface ClientFormsDrawerProps {
 export default function ClientFormsDrawer({ open, client, onClose }: ClientFormsDrawerProps) {
   const { locale } = useAppContext();
   const theme = useTheme();
+  const navigate = useNavigate();
   const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
 
   const { data: forms = [], isLoading } = useClientForms(client?.id || '-1');
@@ -50,9 +94,6 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
-  const [activeForm, setActiveForm] = useState<Form | null>(null);
-  const [editingFormStructure, setEditingFormStructure] = useState<Form | null>(null);
-
   if (!client) return null;
 
   const handleCreateFromTemplate = async () => {
@@ -62,13 +103,25 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
       templateId: selectedTemplateId,
     });
     setCreateDialogOpen(false);
-    setActiveForm(newForm); // Open answer mode immediately
+    setSelectedTemplateId('');
+    navigate(`/forms/fill/${newForm.id}`);
+    onClose();
+  };
+
+  const handleFormClick = (formId: string) => {
+    navigate(`/forms/fill/${formId}`);
+    onClose();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t(locale, 'deleteFormConfirm'))) return;
     await deleteForm.mutateAsync(id);
   };
+
+  // Sort forms by most recently created first
+  const sortedForms = [...forms].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
 
   return (
     <>
@@ -109,13 +162,13 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
 
           {isLoading ? (
             <CircularProgress />
-          ) : forms.length === 0 ? (
+          ) : sortedForms.length === 0 ? (
             <Typography color="text.disabled" sx={{ textAlign: 'center', mt: 4 }}>
               {t(locale, 'noFormsYet')}
             </Typography>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {forms.map((f) => (
+              {sortedForms.map((f) => (
                 <Paper
                   key={f.id}
                   variant="outlined"
@@ -124,15 +177,22 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
                     cursor: 'pointer',
                     '&:hover': { bgcolor: 'action.hover' },
                     position: 'relative',
+                    transition: 'background-color 120ms',
                   }}
-                  onClick={() => setActiveForm(f)}
+                  onClick={() => handleFormClick(f.id)}
                 >
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, pr: 4 }}>
-                    {f.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {new Date(f.created_at).toLocaleDateString()}
-                  </Typography>
+                  <Box sx={{ pr: 4 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {f.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                      {new Date(f.created_at).toLocaleDateString()}
+                    </Typography>
+                    {/* Improvement: completion badge per form */}
+                    <Box sx={{ mt: 1 }}>
+                      <FormProgressBadge formId={f.id} locale={locale} />
+                    </Box>
+                  </Box>
                   <IconButton
                     size="small"
                     color="error"
@@ -168,9 +228,9 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
                 <MenuItem value="" disabled>
                   <em>{t(locale, 'selectTemplatePlaceholder')}</em>
                 </MenuItem>
-                {templates.map(t => (
-                  <MenuItem key={t.id} value={t.id}>
-                    {t.title}
+                {templates.map((tmpl) => (
+                  <MenuItem key={tmpl.id} value={tmpl.id}>
+                    {tmpl.title}
                   </MenuItem>
                 ))}
               </Select>
@@ -189,22 +249,6 @@ export default function ClientFormsDrawer({ open, client, onClose }: ClientForms
           </Button>
         </DialogActions>
       </Dialog>
-
-      {activeForm && (
-        <FormFiller
-          form={activeForm}
-          onClose={() => setActiveForm(null)}
-          onEditStructure={() => setEditingFormStructure(activeForm)}
-        />
-      )}
-
-      {editingFormStructure && (
-        <TemplateBuilder
-          open={true}
-          template={editingFormStructure}
-          onClose={() => setEditingFormStructure(null)}
-        />
-      )}
     </>
   );
 }

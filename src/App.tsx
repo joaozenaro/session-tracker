@@ -11,6 +11,8 @@ import CalendarPage from './pages/CalendarPage';
 import SessionsPage from './pages/SessionsPage';
 import ClientsPage from './pages/ClientsPage';
 import TemplatesPage from './pages/TemplatesPage';
+import TemplateEditorPage from './pages/TemplateEditorPage';
+import FormFillerPage from './pages/FormFillerPage';
 
 function AppProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark'>(() => {
@@ -62,6 +64,9 @@ export default function App() {
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/templates/new" element={<TemplateEditorPage />} />
+            <Route path="/templates/edit/:id" element={<TemplateEditorPage />} />
+            <Route path="/forms/fill/:id" element={<FormFillerPage />} />
           </Routes>
         </Layout>
       </BrowserRouter>

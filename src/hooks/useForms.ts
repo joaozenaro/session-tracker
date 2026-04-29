@@ -96,6 +96,8 @@ export function useUpdateQuestion() {
       formService.updateQuestion(vars.id, vars.payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['form_questions', variables.formId] });
+      // Also refresh form cards so updated_at is reflected in ClientFormsDrawer
+      queryClient.invalidateQueries({ queryKey: ['forms'] });
     },
   });
 }
