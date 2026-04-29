@@ -1,5 +1,6 @@
 pub mod clients;
 pub mod sessions;
+pub mod forms;
 
 /// Run a Diesel closure on a blocking thread-pool thread.
 ///

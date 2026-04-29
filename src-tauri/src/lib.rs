@@ -38,6 +38,17 @@ pub fn run() {
             commands::sessions::delete_session,
             commands::sessions::create_session_series,
             commands::sessions::extend_session_series,
+            commands::forms::get_templates,
+            commands::forms::get_client_forms,
+            commands::forms::create_template,
+            commands::forms::create_client_form,
+            commands::forms::copy_template_to_client,
+            commands::forms::update_form,
+            commands::forms::delete_form,
+            commands::forms::get_form_questions,
+            commands::forms::create_question,
+            commands::forms::update_question,
+            commands::forms::delete_question,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
