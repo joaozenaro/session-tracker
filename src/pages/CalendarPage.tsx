@@ -36,7 +36,7 @@ export default function CalendarPage() {
   const todayStr = toLocalDateString(todayDate);
   const { locale } = useAppContext();
 
-  const [view, setView] = useState<CalendarView>('month');
+  const [view, setView] = useState<CalendarView>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
@@ -97,9 +97,15 @@ export default function CalendarPage() {
   };
 
   const handleDayClick = (dateStr: string) => {
-    setEditingSession(null);
-    setDrawerInitialDate(dateStr);
-    setDrawerOpen(true);
+    const hasSessions = sessions.some((s) => s.session_date === dateStr);
+    if (hasSessions) {
+      setCurrentDate(parseLocalDate(dateStr));
+      setView('day');
+    } else {
+      setEditingSession(null);
+      setDrawerInitialDate(dateStr);
+      setDrawerOpen(true);
+    }
   };
 
   const handleSessionClick = (session: SessionWithClient) => {

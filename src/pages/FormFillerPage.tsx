@@ -1,4 +1,8 @@
 import { useState, useMemo, useRef } from 'react';
+import type { FormQuestion } from '../types/form';
+
+const EMPTY_QUESTIONS: FormQuestion[] = [];
+
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -21,6 +25,7 @@ import {
   ListItemButton,
   ListItemText,
   ListItemIcon,
+  FormGroup,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -32,7 +37,6 @@ import { useFormQuestions, useUpdateQuestion } from '../hooks/useForms';
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
 import type { Locale } from '../lib/i18n';
-import type { FormQuestion } from '../types/form';
 
 const DEBOUNCE_MS = 800;
 
@@ -46,8 +50,17 @@ function isAnswered(q: FormQuestion): boolean {
       return q.answer_number !== null;
     case 'yes_no':
       return q.answer_yes_no !== null;
-    case 'checkbox':
+    case 'checkbox': {
+      try {
+        const opts = JSON.parse(q.options || '[]');
+        if (Array.isArray(opts) && opts.length > 1) {
+          return q.answer_text !== null && q.answer_text !== '' && q.answer_text !== '[]';
+        }
+      } catch {
+        /* ignore */
+      }
       return q.answer_checkbox !== null;
+    }
     default:
       return false;
   }
@@ -173,16 +186,53 @@ function FocusedQuestion({ question, locale }: { question: FormQuestion; locale:
       )}
 
       {question.question_type === 'checkbox' && (
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={!!question.answer_checkbox}
-              onChange={(e) => void saveChanges({ answer_checkbox: e.target.checked })}
-              sx={{ '& .MuiSvgIcon-root': { fontSize: 32 } }}
+        <Box>
+          {options.length <= 1 ? (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={!!question.answer_checkbox}
+                  onChange={(e) => void saveChanges({ answer_checkbox: e.target.checked })}
+                  sx={{ '& .MuiSvgIcon-root': { fontSize: 32 } }}
+                />
+              }
+              label={options[0] || t(locale, 'checked')}
             />
-          }
-          label={t(locale, 'checked')}
-        />
+          ) : (
+            <FormGroup>
+              {options.map((opt) => {
+                let selected: string[] = [];
+                try {
+                  selected = JSON.parse(question.answer_text || '[]');
+                  if (!Array.isArray(selected)) selected = [];
+                } catch {
+                  selected = [];
+                }
+                const isChecked = selected.includes(opt);
+                return (
+                  <FormControlLabel
+                    key={opt}
+                    control={
+                      <Checkbox
+                        checked={isChecked}
+                        onChange={(e) => {
+                          let nextSelected: string[];
+                          if (e.target.checked) {
+                            nextSelected = [...selected, opt];
+                          } else {
+                            nextSelected = selected.filter((s) => s !== opt);
+                          }
+                          void saveChanges({ answer_text: JSON.stringify(nextSelected) });
+                        }}
+                      />
+                    }
+                    label={opt}
+                  />
+                );
+              })}
+            </FormGroup>
+          )}
+        </Box>
       )}
 
       {question.question_type === 'yes_no' && (
@@ -237,11 +287,11 @@ export default function FormFillerPage() {
   const navigate = useNavigate();
   const { locale } = useAppContext();
 
-  const { data: questions = [], isLoading: loadingQuestions } = useFormQuestions(id || '-1');
+  const { data: questions, isLoading: loadingQuestions } = useFormQuestions(id || '-1');
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
 
   const sortedQuestions = useMemo(
-    () => [...questions].sort((a, b) => a.position - b.position),
+    () => (questions ? [...questions].sort((a, b) => a.position - b.position) : EMPTY_QUESTIONS),
     [questions]
   );
 

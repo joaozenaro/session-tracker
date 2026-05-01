@@ -17,10 +17,11 @@ pub fn run() {
                 std::fs::create_dir_all(&app_data_dir)?;
             }
             let db_path = app_data_dir.join("app.db");
-            let db_path_str = db_path.to_str().expect("Database path should be valid UTF-8");
+            let db_path_str = db_path
+                .to_str()
+                .expect("Database path should be valid UTF-8");
 
-            let pool = setup_db(db_path_str)
-                .map_err(|e| e.to_string())?;
+            let pool = setup_db(db_path_str).map_err(|e| e.to_string())?;
 
             app.manage(pool);
             Ok(())

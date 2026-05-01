@@ -364,7 +364,7 @@ export default function SessionDrawer({
                     value={numSessions}
                     onChange={(e) => setNumSessions(Math.max(1, parseInt(e.target.value) || 1))}
                     size="small"
-                    inputProps={{ min: 1, max: 52 }}
+                    slotProps={{ htmlInput: { min: 1, max: 52 } }}
                   />
                   <Typography variant="caption" color="text.secondary">
                     {t(locale, 'willAdd').replace('{count}', numSessions.toString())}

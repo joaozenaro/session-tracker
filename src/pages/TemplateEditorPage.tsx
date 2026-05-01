@@ -66,7 +66,7 @@ import {
 import { useAppContext } from '../lib/AppContext';
 import { t } from '../lib/i18n';
 import type { Locale } from '../lib/i18n';
-import type { FormQuestion, QuestionType } from '../types/form';
+import type { Form, FormQuestion, QuestionType } from '../types/form';
 
 // --- UI Components ---
 
@@ -133,15 +133,81 @@ const QuestionRow = ({
           />
         </Box>
       </TableCell>
-      <TableCell sx={{ minWidth: 200 }}>
-        <TextField
-          fullWidth
-          variant="standard"
-          size="small"
-          value={question.question_text}
-          onChange={(e) => onUpdate(question.id, { question_text: e.target.value })}
-          placeholder={t(locale, 'questionTextPlaceholder')}
-        />
+      <TableCell sx={{ minWidth: 300, verticalAlign: 'top', py: 1 }}>
+        <Stack spacing={1}>
+          <TextField
+            fullWidth
+            variant="standard"
+            size="small"
+            value={question.question_text}
+            onChange={(e) => onUpdate(question.id, { question_text: e.target.value })}
+            placeholder={t(locale, 'questionTextPlaceholder')}
+            sx={{ fontWeight: 500 }}
+          />
+
+          {(question.question_type === 'dropdown' || question.question_type === 'checkbox') && (
+            <Box sx={{ ml: 1 }}>
+              {(() => {
+                let options: string[] = [];
+                try {
+                  const parsed = JSON.parse(question.options || '[]');
+                  options = Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  options = [];
+                }
+
+                return (
+                  <Stack spacing={0.5}>
+                    {options.map((opt, i) => (
+                      <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <TextField
+                          fullWidth
+                          variant="standard"
+                          size="small"
+                          value={opt}
+                          onChange={(e) => {
+                            const newOptions = [...options];
+                            newOptions[i] = e.target.value;
+                            onUpdate(question.id, { options: JSON.stringify(newOptions) });
+                          }}
+                          placeholder={`${t(locale, 'option')} ${i + 1}`}
+                          slotProps={{ input: { sx: { fontSize: '0.75rem' } } }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const newOptions = options.filter((_, idx) => idx !== i);
+                            onUpdate(question.id, { options: JSON.stringify(newOptions) });
+                          }}
+                        >
+                          <DeleteIcon sx={{ fontSize: '0.9rem' }} />
+                        </IconButton>
+                      </Box>
+                    ))}
+                    <Button
+                      size="small"
+                      startIcon={<AddIcon sx={{ fontSize: '0.8rem' }} />}
+                      onClick={() => {
+                        const newOptions = [...options, ''];
+                        onUpdate(question.id, { options: JSON.stringify(newOptions) });
+                      }}
+                      sx={{
+                        fontSize: '0.7rem',
+                        justifyContent: 'flex-start',
+                        p: 0,
+                        minWidth: 0,
+                        mt: 0.5,
+                        textTransform: 'none',
+                      }}
+                    >
+                      {t(locale, 'addOption')}
+                    </Button>
+                  </Stack>
+                );
+              })()}
+            </Box>
+          )}
+        </Stack>
       </TableCell>
       <TableCell>
         <Select
@@ -204,10 +270,10 @@ export default function TemplateEditorPage() {
   const { locale } = useAppContext();
 
   const isNew = !id;
-  const { data: templates = [] } = useTemplates();
-  const template = useMemo(() => templates.find((t) => t.id === id), [templates, id]);
+  const { data: templates } = useTemplates();
+  const template = useMemo(() => (templates || []).find((t) => t.id === id), [templates, id]);
 
-  const { data: initialQuestions = [], isLoading: loadingQuestions } = useFormQuestions(id || '-1');
+  const { data: initialQuestions, isLoading: loadingQuestions } = useFormQuestions(id || '-1');
 
   const [questions, setQuestions] = useState<FormQuestion[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -218,17 +284,19 @@ export default function TemplateEditorPage() {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [isLocalUpdate, setIsLocalUpdate] = useState(false);
 
-  const [prevInitialQuestions, setPrevInitialQuestions] = useState(initialQuestions);
+  const [prevInitialQuestions, setPrevInitialQuestions] = useState<
+    FormQuestion[] | undefined | null
+  >(null);
   if (initialQuestions !== prevInitialQuestions && !isLocalUpdate) {
     setPrevInitialQuestions(initialQuestions);
-    if (initialQuestions.length > 0) {
+    if (initialQuestions && initialQuestions.length > 0) {
       setQuestions([...initialQuestions].sort((a, b) => a.position - b.position));
     } else {
       setQuestions([]);
     }
   }
 
-  const [prevTemplate, setPrevTemplate] = useState(template);
+  const [prevTemplate, setPrevTemplate] = useState<Form>();
   if (template !== prevTemplate && template) {
     setPrevTemplate(template);
     setTitle(template.title);
@@ -282,9 +350,26 @@ export default function TemplateEditorPage() {
   const handleAddQuestion = async () => {
     if (!id) {
       const newT = await createTemplate.mutateAsync({
-        title: title || 'New Template',
+        title: title || t(locale, 'newTemplateDefault'),
         description,
       });
+
+      // Also create the first question immediately for a better QoL flow
+      await createQ.mutateAsync({
+        formId: newT.id,
+        payload: {
+          question_text: '',
+          question_type: 'text',
+          options: null,
+          position: 0,
+          answer_text: null,
+          answer_yes_no: null,
+          answer_why_not: null,
+          answer_checkbox: null,
+          answer_number: null,
+        },
+      });
+
       navigate(`/templates/edit/${newT.id}`, { replace: true });
       return;
     }
@@ -323,8 +408,9 @@ export default function TemplateEditorPage() {
       navigate(`/templates/edit/${newT.id}`);
     } else if (id) {
       await updateForm.mutateAsync({ id, payload: { title, description } });
+      const currentInitial = initialQuestions || [];
       for (const q of questions) {
-        const original = initialQuestions.find((oq) => oq.id === q.id);
+        const original = currentInitial.find((oq) => oq.id === q.id);
         if (
           original &&
           (original.question_text !== q.question_text || original.question_type !== q.question_type)
@@ -387,8 +473,8 @@ export default function TemplateEditorPage() {
   if (!isNew && !template && !loadingQuestions) {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Typography>Template not found</Typography>
-        <Button onClick={() => navigate('/templates')}>Go back</Button>
+        <Typography>{t(locale, 'templateNotFound')}</Typography>
+        <Button onClick={() => navigate('/templates')}>{t(locale, 'goBack')}</Button>
       </Box>
     );
   }
@@ -541,9 +627,9 @@ export default function TemplateEditorPage() {
                           question={q}
                           isSelected={selectedIds.has(q.id)}
                           onToggleSelect={handleToggleSelect}
-                          onDelete={(id) => {
+                          onDelete={(qId) => {
                             if (confirm(t(locale, 'deleteQuestionConfirm'))) {
-                              deleteQ.mutate({ formId: id, id });
+                              if (id) deleteQ.mutate({ formId: id, id: qId });
                             }
                           }}
                           onUpdate={handleUpdateLocalQuestion}

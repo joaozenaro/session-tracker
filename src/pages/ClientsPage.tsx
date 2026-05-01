@@ -476,7 +476,7 @@ export default function ClientsPage() {
                     >
                       <Badge
                         variant="dot"
-                        color="warning"
+                        color="success"
                         invisible={!!client.medications && client.medications !== '<p></p>'}
                       >
                         <MedicationIcon fontSize="small" color="action" />

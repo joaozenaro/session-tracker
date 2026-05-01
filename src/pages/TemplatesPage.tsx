@@ -19,7 +19,8 @@ import { t } from '../lib/i18n';
 export default function TemplatesPage() {
   const { locale } = useAppContext();
   const navigate = useNavigate();
-  const { data: templates = [], isLoading, error } = useTemplates();
+  const { data: templatesRaw, isLoading, error } = useTemplates();
+  const templates = templatesRaw || [];
   const deleteForm = useDeleteForm();
 
   const handleAdd = () => {

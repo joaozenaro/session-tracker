@@ -1,7 +1,6 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import Chip from '@mui/material/Chip';
 import { useAppContext } from '../../lib/AppContext';
 import { t } from '../../lib/i18n';
 import { getCalendarGrid, toLocalDateString, formatTime12 } from '../../lib/calendarUtils';
@@ -78,7 +77,13 @@ export default function MonthView({
           gridTemplateColumns: 'repeat(7, 1fr)',
           gridTemplateRows: `repeat(${grid.length / 7}, 1fr)`,
           flexGrow: 1,
-          '& > *': { borderRight: 1, borderBottom: 1, borderColor: 'divider' },
+          overflow: 'hidden',
+          '& > *': {
+            borderRight: 1,
+            borderBottom: 1,
+            borderColor: 'divider',
+            minHeight: 0,
+          },
         }}
       >
         {grid.map((day, i) => {
@@ -97,21 +102,24 @@ export default function MonthView({
               sx={{
                 p: 0.75,
                 cursor: 'pointer',
-                minHeight: 90,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
                 '&:hover': { bgcolor: 'action.hover' },
                 opacity: isCurrentMonth ? 1 : 0.4,
               }}
             >
               <Box
                 sx={{
-                  width: 26,
-                  height: 26,
+                  width: 24,
+                  height: 24,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: '50%',
                   mb: 0.5,
                   bgcolor: isToday ? 'primary.main' : 'transparent',
+                  flexShrink: 0,
                 }}
               >
                 <Typography
@@ -119,55 +127,64 @@ export default function MonthView({
                   sx={{
                     fontWeight: isToday ? 700 : 400,
                     color: isToday ? 'primary.contrastText' : 'text.primary',
-                    fontSize: '0.78rem',
+                    fontSize: '0.75rem',
                   }}
                 >
                   {day.getDate()}
                 </Typography>
               </Box>
 
-              {daySessions.slice(0, 3).map((s) => (
-                <Paper
-                  key={s.id}
-                  elevation={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSessionClick(s);
-                  }}
-                  sx={{
-                    px: 0.75,
-                    py: 0.25,
-                    mb: 0.25,
-                    bgcolor: s.client?.color || 'primary.main',
-                    borderRadius: 0.75,
-                    cursor: 'pointer',
-                    '&:hover': { filter: 'brightness(0.95)' },
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Typography
-                    variant="caption"
+              <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                {daySessions.slice(0, 3).map((s) => (
+                  <Paper
+                    key={s.id}
+                    elevation={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSessionClick(s);
+                    }}
                     sx={{
-                      color: 'text.primary',
-                      fontSize: '0.68rem',
-                      display: 'block',
-                      whiteSpace: 'nowrap',
+                      px: 0.75,
+                      py: 0.25,
+                      mb: 0.25,
+                      bgcolor: s.client?.color || 'primary.main',
+                      borderRadius: 0.75,
+                      cursor: 'pointer',
+                      '&:hover': { filter: 'brightness(0.95)' },
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      fontWeight: 500,
                     }}
                   >
-                    {formatTime12(s.session_time)} {s.client?.name.split(' ')[0]}
-                  </Typography>
-                </Paper>
-              ))}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.primary',
+                        fontSize: '0.65rem',
+                        display: 'block',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {formatTime12(s.session_time)} {s.client?.name.split(' ')[0]}
+                    </Typography>
+                  </Paper>
+                ))}
+              </Box>
 
               {daySessions.length > 3 && (
-                <Chip
-                  label={`+${daySessions.length - 3} more`}
-                  size="small"
-                  sx={{ fontSize: '0.65rem', height: 16, borderRadius: 0.75 }}
-                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: '0.6rem',
+                    color: 'text.secondary',
+                    fontWeight: 600,
+                    mt: 'auto',
+                    flexShrink: 0,
+                  }}
+                >
+                  +{daySessions.length - 3} {t(locale, 'more')}
+                </Typography>
               )}
             </Box>
           );
