@@ -13,6 +13,7 @@ import ClientsPage from './pages/ClientsPage';
 import TemplatesPage from './pages/TemplatesPage';
 import TemplateEditorPage from './pages/TemplateEditorPage';
 import FormFillerPage from './pages/FormFillerPage';
+import ClientFilesPage from './pages/ClientFilesPage';
 import { NotificationProvider } from './components/NotificationProvider';
 
 function AppProvider({ children }: { children: ReactNode }) {
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/" element={<CalendarPage />} />
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:id/files" element={<ClientFilesPage />} />
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/templates/new" element={<TemplateEditorPage />} />
             <Route path="/templates/edit/:id" element={<TemplateEditorPage />} />

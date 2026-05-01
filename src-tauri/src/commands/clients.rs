@@ -25,6 +25,18 @@ pub async fn get_clients(pool: State<'_, DbPool>) -> CmdResult<Vec<Client>> {
 }
 
 #[tauri::command]
+pub async fn get_client(pool: State<'_, DbPool>, id: String) -> CmdResult<Client> {
+    let pool = pool.inner().clone();
+    blocking!(pool, |conn: &mut SqliteConnection| {
+        clients::table
+            .find(id)
+            .select(Client::as_select())
+            .first(conn)
+            .map_err(AppError::from)
+    })
+}
+
+#[tauri::command]
 pub async fn get_session_counts(pool: State<'_, DbPool>) -> CmdResult<HashMap<String, u32>> {
     let pool = pool.inner().clone();
     blocking!(pool, |conn: &mut SqliteConnection| {
@@ -60,6 +72,37 @@ pub async fn create_client(pool: State<'_, DbPool>, payload: ClientInsert) -> Cm
         let hue = (id.as_bytes()[0] as u32 * 360) / 256;
         let color = format!("hsl({}, 80%, 70%)", hue);
         
+        let mut folder_name = payload.name.to_lowercase()
+            .chars()
+            .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+            .collect::<String>()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join("_");
+            
+        if folder_name.is_empty() {
+            folder_name = "client".into();
+        }
+        
+        let base_folder_name = folder_name.clone();
+        let mut counter = 1;
+        
+        loop {
+            let exists: bool = clients::table
+                .filter(clients::folder_name.eq(&folder_name))
+                .count()
+                .get_result::<i64>(conn)
+                .map(|count| count > 0)
+                .unwrap_or(false);
+                
+            if !exists {
+                break;
+            }
+            
+            folder_name = format!("{}_{}", base_folder_name, counter);
+            counter += 1;
+        }
+
         let new = NewClient {
             id:          id.to_string(),
             name:        payload.name,
@@ -68,6 +111,7 @@ pub async fn create_client(pool: State<'_, DbPool>, payload: ClientInsert) -> Cm
             plan:        String::new(),
             medications: String::new(),
             color,
+            folder_name,
         };
         diesel::insert_into(clients::table)
             .values(&new)

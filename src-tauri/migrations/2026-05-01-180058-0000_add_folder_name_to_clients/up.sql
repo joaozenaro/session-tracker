@@ -1,0 +1,1 @@
+ALTER TABLE clients ADD COLUMN folder_name TEXT NOT NULL DEFAULT '';

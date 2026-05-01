@@ -28,6 +28,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::clients::get_clients,
+            commands::clients::get_client,
             commands::clients::create_client,
             commands::clients::update_client,
             commands::clients::delete_client,
@@ -50,6 +51,14 @@ pub fn run() {
             commands::forms::create_question,
             commands::forms::update_question,
             commands::forms::delete_question,
+            commands::files::get_client_folder_path,
+            commands::files::open_client_folder,
+            commands::files::list_client_files,
+            commands::files::rename_client_file,
+            commands::files::delete_client_file,
+            commands::files::read_client_file,
+            commands::files::save_client_file,
+            commands::files::copy_file_to_client,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

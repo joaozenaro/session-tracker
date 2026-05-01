@@ -9,6 +9,7 @@ diesel::table! {
         plan -> Text,
         medications -> Text,
         color -> Text,
+        folder_name -> Text,
     }
 }
 

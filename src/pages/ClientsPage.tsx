@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -27,6 +28,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import MedicationIcon from '@mui/icons-material/Medication';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import Badge from '@mui/material/Badge';
 import { MuiTelInput } from 'mui-tel-input';
 import { useAppContext } from '../lib/AppContext';
@@ -281,6 +283,7 @@ function ClientMenu({ client, onEdit, onDelete, locale }: ClientMenuProps) {
 
 export default function ClientsPage() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { locale } = useAppContext();
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -321,6 +324,10 @@ export default function ClientsPage() {
     setTextEditorClient(client);
     setTextEditorType(type);
     setTextEditorOpen(true);
+  };
+
+  const handleOpenFiles = (client: Client) => {
+    navigate(`/clients/${client.id}/files`);
   };
 
   const filtered = clients.filter(
@@ -487,6 +494,12 @@ export default function ClientsPage() {
                   <Tooltip title={t(locale, 'forms')}>
                     <IconButton size="small" onClick={() => handleOpenForms(client)}>
                       <AssignmentIcon fontSize="small" color="action" />
+                    </IconButton>
+                  </Tooltip>
+                  <Divider orientation="vertical" flexItem sx={{ height: 20, my: 'auto' }} />
+                  <Tooltip title={t(locale, 'manageFiles')}>
+                    <IconButton size="small" onClick={() => handleOpenFiles(client)}>
+                      <AttachFileIcon fontSize="small" color="action" />
                     </IconButton>
                   </Tooltip>
                 </Box>

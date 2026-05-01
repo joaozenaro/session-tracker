@@ -6,6 +6,7 @@ pub enum AppError {
     Database(String),
     NotFound(String),
     Validation(String),
+    Io(String),
 }
 
 impl From<diesel::result::Error> for AppError {
@@ -23,10 +24,18 @@ impl From<diesel::r2d2::PoolError> for AppError {
     }
 }
 
+impl From<std::io::Error> for AppError {
+    fn from(e: std::io::Error) -> Self {
+        AppError::Io(e.to_string())
+    }
+}
+
 impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Database(m) | Self::NotFound(m) | Self::Validation(m) => write!(f, "{m}"),
+            Self::Database(m) | Self::NotFound(m) | Self::Validation(m) | Self::Io(m) => {
+                write!(f, "{m}")
+            }
         }
     }
 }
