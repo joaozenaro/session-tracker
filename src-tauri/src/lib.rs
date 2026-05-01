@@ -3,12 +3,25 @@ mod db;
 mod error;
 mod models;
 mod schema;
+mod stt;
 
+use commands::stt::{SttInner, SttState};
 use db::setup_db;
+use stt::engine::init_engine;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // On Linux/WSL, ALSA routes audio through PulseAudio.
+    // Set PULSE_SERVER only if not already set so a user-provided value wins.
+    #[cfg(target_os = "linux")]
+    if std::env::var("PULSE_SERVER").is_err() {
+        let wslg_socket = "/mnt/wslg/runtime-dir/pulse/native";
+        if std::path::Path::new(wslg_socket).exists() {
+            std::env::set_var("PULSE_SERVER", format!("unix:{wslg_socket}"));
+        }
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
@@ -22,8 +35,26 @@ pub fn run() {
                 .expect("Database path should be valid UTF-8");
 
             let pool = setup_db(db_path_str).map_err(|e| e.to_string())?;
-
             app.manage(pool);
+
+            // Initialise Whisper model (once, at startup).
+            // In dev mode Tauri's resource_dir() points to target/debug/ which doesn't
+            // contain the model. Fall back to the source tree instead.
+            let model_path = if cfg!(debug_assertions) {
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("resources")
+                    .join("ggml-small.bin")
+            } else {
+                app.path().resource_dir()?.join("ggml-small.bin")
+            };
+            init_engine(&model_path).map_err(|e| e.to_string())?;
+
+            // Manage shared STT state
+            let stt_state: SttState = std::sync::Arc::new(
+                std::sync::Mutex::new(SttInner::default()),
+            );
+            app.manage(stt_state);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -59,6 +90,8 @@ pub fn run() {
             commands::files::read_client_file,
             commands::files::save_client_file,
             commands::files::copy_file_to_client,
+            commands::stt::start_recording,
+            commands::stt::stop_recording,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

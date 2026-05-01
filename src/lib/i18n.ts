@@ -148,6 +148,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     invalidFileType: 'Invalid file type. Only .pdf and .docx are supported.',
     dropFiles: 'Drop files here to upload',
     dropSupported: 'Supported: .pdf, .docx',
+    micStart: 'Start voice transcription (Portuguese)',
+    micStop: 'Stop recording and insert text',
+    micPermissionDenied: 'Microphone not available. Check system permissions.',
   },
   pt: {
     calendar: 'Calendário',
@@ -296,6 +299,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     invalidFileType: 'Tipo de arquivo inválido. Apenas .pdf e .docx são suportados.',
     dropFiles: 'Arraste os arquivos aqui para enviar',
     dropSupported: 'Suportados: .pdf, .docx',
+    micStart: 'Iniciar transcrição por voz (Português)',
+    micStop: 'Parar gravação e inserir texto',
+    micPermissionDenied: 'Microfone não disponível. Verifique as permissões do sistema.',
   },
 };
 

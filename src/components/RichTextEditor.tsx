@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -6,12 +6,19 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
+import Typography from '@mui/material/Typography';
+import Tooltip from '@mui/material/Tooltip';
 import FormatBoldIcon from '@mui/icons-material/FormatBold';
 import FormatItalicIcon from '@mui/icons-material/FormatItalic';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import MicIcon from '@mui/icons-material/Mic';
+import MicOffIcon from '@mui/icons-material/MicOff';
+import { useAppContext } from '../lib/AppContext';
+import { t } from '../lib/i18n';
+import { useSpeechToText } from '../hooks/useSpeechToText';
 
 interface RichTextEditorProps {
   value: string;
@@ -20,6 +27,7 @@ interface RichTextEditorProps {
 }
 
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  const { locale } = useAppContext();
   const editor = useEditor({
     extensions: [StarterKit, Placeholder.configure({ placeholder })],
     content: value || '',
@@ -35,6 +43,15 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   });
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const {
+    isRecording,
+    confirmedText,
+    unstableText,
+    startRecording,
+    stopRecording,
+    error: sttError,
+  } = useSpeechToText();
 
   useEffect(() => {
     if (!editor) return;
@@ -56,6 +73,23 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     event.preventDefault();
     setIsFullscreen((current) => !current);
   };
+
+  const handleMicToggle = useCallback(
+    async (event: MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      if (isRecording) {
+        const finalText = await stopRecording();
+        if (finalText && editor) {
+          // Append the transcribed text at the end of the current content
+          editor.commands.focus('end');
+          editor.commands.insertContent(finalText + ' ');
+        }
+      } else {
+        await startRecording();
+      }
+    },
+    [isRecording, startRecording, stopRecording, editor],
+  );
 
   // Shared toolbar button group — reused in both normal and fullscreen modes
   const toolbar = (
@@ -100,8 +134,66 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
           <FullscreenIcon fontSize="small" />
         )}
       </Button>
+      <Tooltip title={isRecording ? t(locale, 'micStop') : t(locale, 'micStart')}>
+        <Button
+          id="rte-mic-button"
+          onMouseDown={handleMicToggle}
+          color={isRecording ? 'error' : 'inherit'}
+          aria-label={isRecording ? 'stop recording' : 'start recording'}
+          sx={
+            isRecording
+              ? {
+                  animation: 'pulse 1.4s ease-in-out infinite',
+                  '@keyframes pulse': {
+                    '0%, 100%': { opacity: 1 },
+                    '50%': { opacity: 0.5 },
+                  },
+                }
+              : undefined
+          }
+        >
+          {isRecording ? <MicOffIcon fontSize="small" /> : <MicIcon fontSize="small" />}
+        </Button>
+      </Tooltip>
     </ButtonGroup>
   );
+
+  // Live transcription ghost text displayed below the editor while recording
+  const ghostText =
+    isRecording && (confirmedText || unstableText) ? (
+      <Box
+        sx={{
+          px: 2,
+          pb: 1,
+          borderTop: 1,
+          borderColor: 'divider',
+          bgcolor: 'action.hover',
+        }}
+      >
+        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+          {' '}
+          {confirmedText && (
+            <Box component="span" sx={{ opacity: 0.9 }}>
+              {confirmedText}{' '}
+            </Box>
+          )}
+          {unstableText && (
+            <Box component="span" sx={{ opacity: 0.45 }}>
+              {unstableText}
+            </Box>
+          )}
+        </Typography>
+      </Box>
+    ) : null;
+
+  // Error banner (e.g. mic permission denied)
+  const errorBanner = sttError ? (
+    <Box sx={{ px: 2, py: 0.5, bgcolor: 'error.light' }}>
+      <Typography variant="caption" color="error.contrastText">
+        {sttError}
+      </Typography>
+    </Box>
+  ) : null;
 
   const editorContent = (
     <Box
@@ -156,6 +248,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
           {toolbar}
         </Box>
         {editorContent}
+        {ghostText}
+        {errorBanner}
       </Box>
     );
   }
@@ -186,6 +280,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         {toolbar}
       </Box>
       {editorContent}
+      {ghostText}
+      {errorBanner}
     </Paper>
   );
 }
