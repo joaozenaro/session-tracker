@@ -12,15 +12,53 @@ pub struct MicStream {
     _stream: cpal::Stream,
 }
 
-/// Open the default input device, capture audio, resample to 16 kHz mono,
-/// and push samples into the shared ring buffer.
+/// List all available audio input devices.
+/// Returns a list of (id, display_name) pairs where id == name for simplicity.
+pub fn list_input_devices() -> Vec<(String, String)> {
+    let host = cpal::default_host();
+    match host.input_devices() {
+        Ok(devices) => devices
+            .filter_map(|d| d.name().ok().map(|n| (n.clone(), n)))
+            .collect(),
+        Err(e) => {
+            eprintln!("[stt] failed to enumerate input devices: {e}");
+            vec![]
+        }
+    }
+}
+
+/// Open the given input device (or the system default if `device_name` is None),
+/// capture audio, resample to 16 kHz mono, and push samples into the shared ring buffer.
 ///
 /// Returns a `MicStream` guard — drop it to stop recording.
-pub fn start_capture(buffer: Arc<Mutex<AudioRingBuffer>>) -> Result<MicStream, AppError> {
+pub fn start_capture(
+    buffer: Arc<Mutex<AudioRingBuffer>>,
+    device_name: Option<&str>,
+) -> Result<MicStream, AppError> {
     let host = cpal::default_host();
-    let device = host
-        .default_input_device()
-        .ok_or_else(|| AppError::Validation("no input device available".into()))?;
+
+    let device = if let Some(name) = device_name {
+        // Try to find the named device; fall back to default on failure
+        let found = host
+            .input_devices()
+            .map_err(|e| AppError::Validation(format!("enumerate devices: {e}")))?
+            .find(|d| d.name().map(|n| n.contains(name)).unwrap_or(false));
+
+        match found {
+            Some(d) => {
+                eprintln!("[stt] using selected mic: {:?}", d.name());
+                d
+            }
+            None => {
+                eprintln!("[stt] device '{name}' not found, falling back to default");
+                host.default_input_device()
+                    .ok_or_else(|| AppError::Validation("no input device available".into()))?
+            }
+        }
+    } else {
+        host.default_input_device()
+            .ok_or_else(|| AppError::Validation("no input device available".into()))?
+    };
 
     let config = device
         .default_input_config()

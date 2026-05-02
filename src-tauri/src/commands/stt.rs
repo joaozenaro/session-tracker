@@ -5,7 +5,7 @@ use tauri::Emitter;
 
 use crate::{
     error::{AppError, CmdResult},
-    stt::{buffer::AudioRingBuffer, capture::start_capture, engine::transcribe, state::TranscriptionState},
+    stt::{buffer::AudioRingBuffer, capture::{list_input_devices, start_capture}, engine::transcribe, state::TranscriptionState},
 };
 
 // ── Shared state ──────────────────────────────────────────────────────────────
@@ -48,10 +48,12 @@ pub struct SttUpdate {
 
 /// Open the system microphone and begin transcribing.
 /// Emits `stt://update` events every ~1 second.
+/// Pass `device_name` to select a specific input device (None = system default).
 #[tauri::command]
 pub async fn start_recording(
-    app:   tauri::AppHandle,
-    state: tauri::State<'_, SttState>,
+    app:         tauri::AppHandle,
+    state:       tauri::State<'_, SttState>,
+    device_name: Option<String>,
 ) -> CmdResult<()> {
     // ── Set up state, create stop channel ─────────────────────────────────────
     let (buffer_arc, stop_rx) = {
@@ -79,7 +81,9 @@ pub async fn start_recording(
     // ── cpal capture thread ───────────────────────────────────────────────────
     // cpal::Stream is !Send, so it must be created AND dropped on the same thread.
     let buf_for_cpal = Arc::clone(&buffer_arc);
-    std::thread::spawn(move || match start_capture(buf_for_cpal) {
+    // Capture device_name as an owned String so it can cross thread boundaries
+    let device_name_owned = device_name.clone();
+    std::thread::spawn(move || match start_capture(buf_for_cpal, device_name_owned.as_deref()) {
         Ok(mic) => {
             // Block until the Sender is dropped (stop_recording) or sends.
             let _ = stop_rx.recv();
@@ -162,4 +166,20 @@ pub async fn stop_recording(state: tauri::State<'_, SttState>) -> CmdResult<Stri
     };
     inner.transcription.reset();
     Ok(full)
+}
+
+/// List all available audio input devices.
+/// Returns a JSON array of `{ id, name }` objects.
+#[derive(Clone, Serialize)]
+pub struct MicDeviceInfo {
+    pub id:   String,
+    pub name: String,
+}
+
+#[tauri::command]
+pub fn list_microphones() -> Vec<MicDeviceInfo> {
+    list_input_devices()
+        .into_iter()
+        .map(|(id, name)| MicDeviceInfo { id, name })
+        .collect()
 }

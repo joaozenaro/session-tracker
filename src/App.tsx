@@ -27,6 +27,10 @@ function AppProvider({ children }: { children: ReactNode }) {
     return (saved as Locale) || 'en';
   });
 
+  const [micDeviceId, setMicDeviceIdState] = useState<string | null>(() => {
+    return localStorage.getItem('app-mic-device');
+  });
+
   const handleSetMode = (newMode: 'light' | 'dark') => {
     setMode(newMode);
     localStorage.setItem('app-mode', newMode);
@@ -35,6 +39,15 @@ function AppProvider({ children }: { children: ReactNode }) {
   const handleSetLocale = (newLocale: Locale) => {
     setLocale(newLocale);
     localStorage.setItem('app-locale', newLocale);
+  };
+
+  const handleSetMicDeviceId = (id: string | null) => {
+    setMicDeviceIdState(id);
+    if (id === null) {
+      localStorage.removeItem('app-mic-device');
+    } else {
+      localStorage.setItem('app-mic-device', id);
+    }
   };
 
   const theme = createAppTheme(mode, locale);
@@ -46,6 +59,8 @@ function AppProvider({ children }: { children: ReactNode }) {
         setMode: handleSetMode,
         locale,
         setLocale: handleSetLocale,
+        micDeviceId,
+        setMicDeviceId: handleSetMicDeviceId,
       }}
     >
       <ThemeProvider theme={theme}>

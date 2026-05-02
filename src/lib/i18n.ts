@@ -151,6 +151,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     micStart: 'Start voice transcription (Portuguese)',
     micStop: 'Stop recording and insert text',
     micPermissionDenied: 'Microphone not available. Check system permissions.',
+    settings: 'Settings',
+    appearance: 'Appearance',
+    language: 'Language',
+    microphone: 'Microphone',
+    systemDefault: 'System default',
+    microphoneHint: 'Select the input device used for voice transcription',
   },
   pt: {
     calendar: 'Calendário',
@@ -302,6 +308,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     micStart: 'Iniciar transcrição por voz (Português)',
     micStop: 'Parar gravação e inserir texto',
     micPermissionDenied: 'Microfone não disponível. Verifique as permissões do sistema.',
+    settings: 'Configurações',
+    appearance: 'Aparência',
+    language: 'Idioma',
+    microphone: 'Microfone',
+    systemDefault: 'Padrão do sistema',
+    microphoneHint: 'Selecione o dispositivo de entrada para transcrição de voz',
   },
 };
 

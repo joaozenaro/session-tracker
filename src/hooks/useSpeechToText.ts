@@ -19,7 +19,7 @@ interface UseSpeechToTextReturn {
 }
 
 export function useSpeechToText(): UseSpeechToTextReturn {
-  const { locale } = useAppContext();
+  const { locale, micDeviceId } = useAppContext();
   const [isRecording, setIsRecording] = useState(false);
   const [confirmedText, setConfirmedText] = useState('');
   const [unstableText, setUnstableText] = useState('');
@@ -46,13 +46,13 @@ export function useSpeechToText(): UseSpeechToTextReturn {
     setConfirmedText('');
     setUnstableText('');
     try {
-      await invoke('start_recording');
+      await invoke('start_recording', { deviceName: micDeviceId ?? null });
       setIsRecording(true);
     } catch (err) {
       console.error('[stt] start error:', err);
       setError(t(locale, 'micPermissionDenied'));
     }
-  }, [locale]);
+  }, [locale, micDeviceId]);
 
   const stopRecording = useCallback(async (): Promise<string> => {
     let finalText = '';

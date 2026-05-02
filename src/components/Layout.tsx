@@ -12,8 +12,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Divider from '@mui/material/Divider';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
+import Tooltip from '@mui/material/Tooltip';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -22,12 +21,10 @@ import PeopleIcon from '@mui/icons-material/People';
 import MenuIcon from '@mui/icons-material/Menu';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import SpaIcon from '@mui/icons-material/Spa';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import LanguageIcon from '@mui/icons-material/Language';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { useAppContext } from '../lib/AppContext';
-import type { Locale } from '../lib/i18n';
 import { t } from '../lib/i18n';
+import SettingsPanel from './SettingsPanel';
 
 const DRAWER_WIDTH = 220;
 
@@ -41,19 +38,14 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-const LOCALES = [
-  { code: 'en', name: 'English' },
-  { code: 'pt', name: 'Português' },
-];
-
 export default function Layout({ children }: LayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
+  const [settingsAnchor, setSettingsAnchor] = useState<null | HTMLElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { mode, setMode, locale, setLocale } = useAppContext();
+  const { locale } = useAppContext();
 
   const navItems: NavItem[] = [
     { label: t(locale, 'calendar'), path: '/', icon: <CalendarMonthIcon /> },
@@ -69,19 +61,6 @@ export default function Layout({ children }: LayoutProps) {
   const handleNavClick = (path: string) => {
     navigate(path);
     setMobileOpen(false);
-  };
-
-  const handleThemeToggle = () => {
-    setMode(mode === 'light' ? 'dark' : 'light');
-  };
-
-  const handleLanguageOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setLangAnchor(event.currentTarget);
-  };
-
-  const handleLanguageSelect = (code: string) => {
-    setLocale(code as Locale);
-    setLangAnchor(null);
   };
 
   const drawerContent = (
@@ -141,17 +120,17 @@ export default function Layout({ children }: LayoutProps) {
         })}
       </List>
       <Divider />
-      <Box sx={{ px: 1, py: 2, display: 'flex', gap: 1 }}>
-        <IconButton size="small" onClick={handleThemeToggle} title="Toggle theme">
-          {mode === 'light' ? (
-            <Brightness4Icon fontSize="small" />
-          ) : (
-            <Brightness7Icon fontSize="small" />
-          )}
-        </IconButton>
-        <IconButton size="small" onClick={handleLanguageOpen} title="Select language">
-          <LanguageIcon fontSize="small" />
-        </IconButton>
+      <Box sx={{ px: 1.5, py: 1.5 }}>
+        <Tooltip title={t(locale, 'settings')} placement="right">
+          <IconButton
+            id="sidebar-settings-button"
+            size="small"
+            onClick={(e) => setSettingsAnchor(e.currentTarget)}
+            aria-label="open settings"
+          >
+            <SettingsIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
     </Box>
   );
@@ -181,12 +160,15 @@ export default function Layout({ children }: LayoutProps) {
               >
                 {t(locale, 'sessions')}
               </Typography>
-              <IconButton size="small" onClick={handleThemeToggle}>
-                {mode === 'light' ? <Brightness4Icon /> : <Brightness7Icon />}
-              </IconButton>
-              <IconButton size="small" onClick={handleLanguageOpen}>
-                <LanguageIcon />
-              </IconButton>
+              <Tooltip title={t(locale, 'settings')}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setSettingsAnchor(e.currentTarget)}
+                  aria-label="open settings"
+                >
+                  <SettingsIcon />
+                </IconButton>
+              </Tooltip>
             </Toolbar>
           </AppBar>
           <Drawer
@@ -242,23 +224,7 @@ export default function Layout({ children }: LayoutProps) {
         </>
       )}
 
-      <Menu
-        anchorEl={langAnchor}
-        open={Boolean(langAnchor)}
-        onClose={() => setLangAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        {LOCALES.map((loc) => (
-          <MenuItem
-            key={loc.code}
-            selected={locale === loc.code}
-            onClick={() => handleLanguageSelect(loc.code)}
-          >
-            {loc.name}
-          </MenuItem>
-        ))}
-      </Menu>
+      <SettingsPanel anchorEl={settingsAnchor} onClose={() => setSettingsAnchor(null)} />
     </Box>
   );
 }

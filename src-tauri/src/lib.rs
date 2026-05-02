@@ -103,6 +103,7 @@ pub fn run() {
             commands::files::copy_file_to_client,
             commands::stt::start_recording,
             commands::stt::stop_recording,
+            commands::stt::list_microphones,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

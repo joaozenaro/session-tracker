@@ -88,7 +88,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         await startRecording();
       }
     },
-    [isRecording, startRecording, stopRecording, editor],
+    [isRecording, startRecording, stopRecording, editor]
   );
 
   // Shared toolbar button group — reused in both normal and fullscreen modes

@@ -8,6 +8,8 @@ export interface AppContextType {
   setMode: (mode: 'light' | 'dark') => void;
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  micDeviceId: string | null;
+  setMicDeviceId: (id: string | null) => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
